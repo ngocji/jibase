@@ -3,16 +3,16 @@ package com.jibase.helper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import com.jibase.helper.GsonManager.SimpleGsonType
+import com.jibase.helper.GsonManager.DEFAULT
 import com.jibase.utils.Log
 import java.lang.reflect.Type
 
 object GsonManager {
-    const val SimpleGsonType = "SimpleGsonType"
+    const val DEFAULT = "DefaultGsonType"
     private val gsonMap by lazy { mutableMapOf<String, Gson>() }
 
     init {
-        gsonMap[SimpleGsonType] = GsonBuilder()
+        gsonMap[DEFAULT] = GsonBuilder()
             .serializeSpecialFloatingPointValues()
             .create()
     }
@@ -26,10 +26,10 @@ object GsonManager {
     inline fun <reified T> fromJson(data: String): T? = fromJson(data, getTypeToken<T>())
 
     @JvmStatic
-    fun <T> fromJson(data: String, type: Type): T? = fromJson(data, type, SimpleGsonType)
+    fun <T> fromJson(data: String, type: Type): T? = fromJson(data, type, DEFAULT)
 
     @JvmStatic
-    fun <T> fromJson(data: String, type: Type, gsonType: String = SimpleGsonType) =
+    fun <T> fromJson(data: String, type: Type, gsonType: String = DEFAULT) =
         try {
             gsonMap[gsonType]?.fromJson<T>(data, type)
         } catch (e: Exception) {
@@ -44,7 +44,7 @@ object GsonManager {
 
     @JvmStatic
     fun <T> fromJson(data: String, classOfType: Class<T>) =
-        fromJson(data, classOfType, SimpleGsonType)
+        fromJson(data, classOfType, DEFAULT)
 
     @JvmStatic
     fun <T> fromJson(data: String, classOfType: Class<T>, gsonType: String) = try {
@@ -55,10 +55,10 @@ object GsonManager {
     }
 
     @JvmStatic
-    fun <T> toJson(data: T): String = toJson(data, SimpleGsonType)
+    fun <T> toJson(data: T): String = toJson(data, DEFAULT)
 
     @JvmStatic
-    fun <T> toJson(data: T, gsonType: String = SimpleGsonType): String {
+    fun <T> toJson(data: T, gsonType: String = DEFAULT): String {
         return try {
             gsonMap[gsonType]?.toJson(data) ?: ""
         } catch (e: Exception) {
@@ -71,12 +71,12 @@ object GsonManager {
 inline fun <reified T> fromJson(
     data: String,
     type: Type = getTypeToken<T>(),
-    gsonType: String = SimpleGsonType
+    gsonType: String = DEFAULT
 ): T? {
     return GsonManager.fromJson<T>(data, type, gsonType)
 }
 
-inline fun <reified T> fromJson(data: String, gsonType: String = SimpleGsonType): T? {
+inline fun <reified T> fromJson(data: String, gsonType: String = DEFAULT): T? {
     return GsonManager.fromJson(data, T::class.java, gsonType = gsonType)
 }
 

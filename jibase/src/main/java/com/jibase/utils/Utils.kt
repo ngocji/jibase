@@ -1,6 +1,5 @@
 package com.jibase.utils
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -9,7 +8,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Menu
-import android.view.WindowManager
 import android.widget.TextView
 
 object Utils {
@@ -25,7 +23,7 @@ object Utils {
         for (i in 0 until menu.size()) {
             val item = menu.getItem(i)
             if (item.icon != null) {
-                Utils.tintDrawable(color, item.icon)
+                tintDrawable(color, item.icon)
             }
         }
     }
@@ -34,7 +32,7 @@ object Utils {
         if (menu == null || menu.size() <= 0) return
         val item = menu.findItem(id)
         if (item != null && item.icon != null) {
-            Utils.tintDrawable(color, item.icon)
+            tintDrawable(color, item.icon)
         }
     }
 
@@ -56,12 +54,6 @@ object Utils {
             val menuItem = menu.findItem(it)
             menuItem?.isVisible = visible
         }
-    }
-
-    fun changeStatusBarColor(activity: Activity, color: Int) {
-        val window = activity.window
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = color
     }
 
     fun changeMenuIcon(menu: Menu?, color: Int, itemId: Int, icon: Int) {
