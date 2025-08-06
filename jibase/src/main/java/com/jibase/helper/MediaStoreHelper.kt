@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package com.jibase.helper
 
 import android.Manifest
@@ -23,6 +25,7 @@ import com.jibase.utils.getMimeType
 import java.io.File
 
 
+@Suppress("DEPRECATION")
 object MediaStoreHelper {
     fun needRequestStoragePermission() = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
 

@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.jibase.iflexible.viewholder
 
 import androidx.recyclerview.widget.RecyclerView

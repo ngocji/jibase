@@ -1,5 +1,6 @@
 package com.jibase.view
 
+import android.graphics.Color
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.StringRes
@@ -8,9 +9,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.jibase.R
 
 class ISnackBar {
-    private val noneColor by lazy { ContextCompat.getColor(context, R.color.trans) }
+    private val noneColor by lazy { context?.let { ContextCompat.getColor(it, R.color.trans) } ?: Color.TRANSPARENT }
 
-    private lateinit var rootView: View
+    private var rootView: View ? = null
     private var message: String = ""
     private var actionName: String = ""
     private var duration: Int = Snackbar.LENGTH_SHORT
@@ -21,7 +22,7 @@ class ISnackBar {
     private var actionColor: Int = noneColor
     private var backgroundColor: Int = noneColor
 
-    private val context get() = rootView.context
+    private val context get() = rootView?.context
 
 
     fun of(rootView: View): ISnackBar {
@@ -35,7 +36,7 @@ class ISnackBar {
     }
 
     fun withMessage(@StringRes messageResId: Int): ISnackBar {
-        this.message = context.getString(messageResId)
+        this.message = context?.getString(messageResId).orEmpty()
         return this
     }
 
@@ -45,7 +46,7 @@ class ISnackBar {
     }
 
     fun withActionName(@StringRes actionNameResId: Int): ISnackBar {
-        this.actionName = context.getString(actionNameResId)
+        this.actionName = context?.getString(actionNameResId).orEmpty()
         return this
     }
 
@@ -83,8 +84,7 @@ class ISnackBar {
 
     @Throws
     fun create(): Snackbar {
-        if (!this::rootView.isLateinit) throw NullPointerException("Empty root view. you want to call of(View v) first")
-        val root = rootView
+        val root = rootView ?: throw NullPointerException("Empty root view. you want to call of(View v) first")
         return Snackbar.make(root, message, duration).apply {
             //Set background
             if (backgroundColor != noneColor) {

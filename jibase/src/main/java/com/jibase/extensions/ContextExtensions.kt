@@ -6,6 +6,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.Toast
@@ -16,13 +18,17 @@ import androidx.core.content.ContextCompat
 import com.jibase.utils.Utils
 
 @SuppressLint("MissingPermission")
-fun Context.isOnline(): Boolean = try {
+fun Context.isOnline(): Boolean {
     val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-    val activeNetworkInfo = connectivityManager?.activeNetworkInfo
-    activeNetworkInfo != null && activeNetworkInfo.isConnected
-} catch (ex: Exception) {
-    ex.printStackTrace()
-    false
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val network = connectivityManager?.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    } else {
+        @Suppress("DEPRECATION")
+        val activeNetworkInfo = connectivityManager?.activeNetworkInfo
+        activeNetworkInfo != null && activeNetworkInfo.isConnected
+    }
 }
 
 fun Context.checkAppInstalled(uri: String?): Boolean {
@@ -30,7 +36,7 @@ fun Context.checkAppInstalled(uri: String?): Boolean {
     try {
         pm.getPackageInfo(uri ?: return false, PackageManager.GET_ACTIVITIES)
         return true
-    } catch (e: PackageManager.NameNotFoundException) {
+    } catch (_: PackageManager.NameNotFoundException) {
     }
     return false
 }

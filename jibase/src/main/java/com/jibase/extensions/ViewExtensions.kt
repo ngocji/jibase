@@ -46,7 +46,7 @@ fun View.changeElevation(value: Float) {
 }
 
 fun View.changeBackground(bg: Drawable?) {
-    ViewCompat.setBackground(this, bg)
+    background = bg
 }
 
 fun View.getCurrentElevation(): Float {

@@ -24,6 +24,13 @@ import com.jibase.iflexible.listener.*
 import com.jibase.iflexible.viewholder.FlexibleExpandableViewHolder
 import com.jibase.iflexible.viewholder.FlexibleViewHolder
 import com.jibase.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.math.ceil
 import kotlin.math.max
@@ -61,7 +68,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     /* HashSet, AsyncTask and DiffUtil objects, will increase performance in big list */
     private var mHashItems: Set<T>? = null
     private var mNotifications: MutableList<Notification>? = null
-    private var mFilterAsyncTask: FilterAsyncTask? = null
+    private var mFilterJob: Job? = null
     private var startTimeFilter = 0L
     private var endTimeFiltered = 0L
 
@@ -142,6 +149,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     var onEndlessScrollListener: EndlessScrollListener? = null
     var onDeleteCompleteListener: OnDeleteCompleteListener? = null
     var onStickyHeaderChangeListener: OnStickyHeaderChangeListener? = null
+    private val coroutineScope = CoroutineScope(SupervisorJob())
 
 
     init {
@@ -168,6 +176,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                     holder.contentView.setOnClickListener(holder)
                 }
             }
+
             is OnItemLongClickListener -> {
                 Log.d("- OnItemLongClickListener", TAG)
                 onItemLongClickListener = listener
@@ -186,6 +195,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 Log.d("- OnItemSwipeListener", TAG)
                 onItemSwipeListener = listener
             }
+
             is OnDeleteCompleteListener -> {
                 Log.d("- OnDeleteCompleteListener", TAG)
                 onDeleteCompleteListener = listener
@@ -195,6 +205,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 Log.d("- OnStickyHeaderChangeListener", TAG)
                 onStickyHeaderChangeListener = listener
             }
+
             is OnUpdateListener -> {
                 Log.d("- OnUpdateListener", TAG)
                 onUpdateListener = listener
@@ -236,6 +247,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                     holder.contentView.setOnClickListener(null)
                 }
             }
+
             is OnItemLongClickListener -> {
                 Log.d("- Remove OnItemLongClickListener", TAG)
                 onItemLongClickListener = null
@@ -254,6 +266,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 Log.d("- Remove OnItemSwipeListener", TAG)
                 onItemSwipeListener = null
             }
+
             is OnDeleteCompleteListener -> {
                 Log.d("- Remove OnDeleteCompleteListener", TAG)
                 onDeleteCompleteListener = null
@@ -263,6 +276,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 Log.d("- Remove OnStickyHeaderChangeListener", TAG)
                 onStickyHeaderChangeListener = null
             }
+
             is OnUpdateListener -> {
                 Log.d("- Remove OnUpdateListener", TAG)
                 onUpdateListener = null
@@ -301,10 +315,15 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             mStickyHeaderHelper?.detachFromRecyclerView()
             mStickyHeaderHelper = null
         }
+        release()
         super.onDetachedFromRecyclerView(recyclerView)
         Log.d("Detached Adapter from RecyclerView", TAG)
     }
 
+    fun release() {
+        mFilterJob?.cancel("Cancelable job filter")
+        mHandler.removeCallbacksAndMessages(null)
+    }
 
     /**
      * Maps and expands items that are initially configured to be shown as expanded.
@@ -1826,7 +1845,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     fun setEndlessProgressItem(progressItem: T?): FlexibleAdapter<T> {
         endlessScrollEnabled = progressItem != null
 
-        if (progressItem!=null) {
+        if (progressItem != null) {
             setEndlessScrollThreshold(mEndlessScrollThreshold)
             mProgressItem = progressItem
             Log.d("Enabled EndlessScrolling Item=$progressItem  enable=$endlessScrollEnabled", TAG)
@@ -1954,7 +1973,6 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         } else if (delay >= 0) {
             hideProgressItem()
         }
-
 
 
         // Add any new items
@@ -3708,7 +3726,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         filtering = true //Enable flag
         if (hasFilter() && hasNewFilter(keyFilter)) { //skip when filter is unchanged
             for (item in unfilteredItems) {
-                if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) return
+                if (mFilterJob != null && true == mFilterJob?.isCancelled) return
                 // Filter normal AND expandable objects
                 filterObject(item, filteredResultItems)
             }
@@ -3752,7 +3770,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     private fun filterObject(item: T, values: MutableList<T>): Boolean {
         // Stop filter task if cancelled
-        if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) return false
+        if (mFilterJob != null && true == mFilterJob?.isCancelled) return false
         // Skip already filtered items (it happens when internal originalList)
         if ((isScrollableHeaderOrFooter(item) || values.contains(item))) {
             return false
@@ -4023,7 +4041,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             mNotifications?.add(Notification(operation = NONE))
         }
         // Execute All notifications if filter was Synchronous!
-        if (mFilterAsyncTask == null) executeNotifications(payloadChange)
+        if (mFilterJob == null) executeNotifications(payloadChange)
     }
 
 
@@ -4038,7 +4056,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             mHashItems = HashSet(from)
             val unfilteredItems = HashMap<T, Int>()
             for (i in newItems.indices) {
-                if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) break
+                if (mFilterJob != null && true == mFilterJob?.isCancelled) break
                 val item = newItems[i]
                 // Save the index of this new item
                 if (true == mHashItems?.contains(item)) unfilteredItems[item] = i
@@ -4060,7 +4078,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         var out = 0
         var mod = 0
         for (i in from.indices.reversed()) {
-            if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) return
+            if (mFilterJob != null && true == mFilterJob?.isCancelled) return
             val item = from[i]
             if (false == mHashItems?.contains(item)) {
                 Log.d("calculateRemovals remove position=$i item=$item", TAG)
@@ -4094,7 +4112,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         mHashItems = HashSet(from)
         var count = 0
         for (position in newItems.indices) {
-            if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) return
+            if (mFilterJob != null && true == mFilterJob?.isCancelled) return
             val item = newItems[position]
             if (false == mHashItems?.contains(item)) {
                 Log.d("calculateAdditions add position=$position item=$item", TAG)
@@ -4127,7 +4145,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     private fun applyAndAnimateMovedItems(from: MutableList<T>, newItems: List<T>) {
         var move = 0
         for (toPosition in newItems.indices.reversed()) {
-            if (mFilterAsyncTask != null && true == mFilterAsyncTask?.isCancelled) return
+            if (mFilterJob != null && true == mFilterJob?.isCancelled) return
             val item = newItems[toPosition]
             val fromPosition = from.indexOf(item)
             if (fromPosition >= 0 && fromPosition != toPosition) {
@@ -4790,11 +4808,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             when (message.what) {
                 MSG_UPDATE, MSG_FILTER -> {
                     //filterItems
-                    mFilterAsyncTask?.cancel(true)
-                    mFilterAsyncTask = FilterAsyncTask(message.what, message.obj as? List<T>)
-                    mFilterAsyncTask?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+                    mFilterJob?.cancel()
+                    mFilterJob = filterAsyncTask(message.what, message.obj as? List<T>)
                     return true
                 }
+
                 MSG_LOAD_MORE_COMPLETE -> {
                     //hide progress item
                     hideProgressItem()
@@ -4805,33 +4823,25 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         }
     }
 
-    private inner class FilterAsyncTask(private val what: Int, newItems: List<T>?) :
-        AsyncTask<Void, Void, Void>() {
-        private val listDoing = mutableListOf<T>()
-
-        init {
-            listDoing.addAll(newItems ?: listOf())
-        }
-
-        override fun onPreExecute() {
+    private fun filterAsyncTask(what: Int, newItems: List<T>?): Job {
+        return coroutineScope.launch(Dispatchers.IO) {
+            Log.d("filterAsyncTask: $what, ${newItems?.size}")
             if (endlessLoading) {
                 Log.d("Cannot filter while endlessLoading", TAG)
-                this.cancel(true)
+                cancel("Cannot filter while endlessLoading")
+                return@launch
             }
-            // Note: In case of some deleted items, we commit the deletion in the original list
-            // and in the current list before starting or resetting the filter.
+
+            val listDoing = newItems?.toMutableList() ?: mutableListOf()
+
             if (isRestoreInTime()) {
                 Log.d("Removing all deleted items before filtering/updating", TAG)
                 listDoing.removeAll(getDeletedItems())
-                onDeleteCompleteListener?.onDeleteConfirmed(DISMISS_EVENT_MANUAL) //  = 3
+                withContext(Dispatchers.Main) {
+                    onDeleteCompleteListener?.onDeleteConfirmed(DISMISS_EVENT_MANUAL) //  = 3
+                }
             }
-        }
 
-        override fun onCancelled() {
-            Log.d("FilterAsyncTask cancelled!", TAG)
-        }
-
-        override fun doInBackground(vararg params: Void): Void? {
             startTimeFilter = System.currentTimeMillis()
             when (what) {
                 MSG_UPDATE -> {
@@ -4840,32 +4850,33 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                     toggleAnimate(listDoing, Payload.CHANGE)
                     Log.d("doInBackground - ended MSG_UPDATE", TAG)
                 }
+
                 MSG_FILTER -> {
                     Log.d("doInBackground - started MSG_FILTER", TAG)
                     filterItemsAsync(listDoing)
                     Log.d("doInBackground - ended MSG_FILTER", TAG)
                 }
             }
-            return null
-        }
 
-        override fun onPostExecute(result: Void?) {
-            if (diffResult != null || mNotifications != null) {
-                //Execute post data
-                when (what) {
-                    MSG_UPDATE -> {
-                        // Notify all the changes
-                        executeNotifications(Payload.CHANGE)
-                        onPostUpdate()
-                    }
-                    MSG_FILTER -> {
-                        // Notify all the changes
-                        executeNotifications(Payload.FILTER)
-                        onPostFilter()
+            withContext(Dispatchers.Main) {
+                if (diffResult != null || mNotifications != null) {
+                    //Execute post data
+                    when (what) {
+                        MSG_UPDATE -> {
+                            // Notify all the changes
+                            executeNotifications(Payload.CHANGE)
+                            onPostUpdate()
+                        }
+
+                        MSG_FILTER -> {
+                            // Notify all the changes
+                            executeNotifications(Payload.FILTER)
+                            onPostFilter()
+                        }
                     }
                 }
+                mFilterJob = null
             }
-            mFilterAsyncTask = null
         }
     }
 

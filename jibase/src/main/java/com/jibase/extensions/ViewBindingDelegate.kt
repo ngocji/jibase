@@ -67,4 +67,3 @@ inline fun <T : ViewBinding> ViewGroup.viewBinding(
 inline fun <T : ViewBinding> Context.viewBinding(
         viewBindingFactory: (LayoutInflater) -> T,
 ) = viewBindingFactory.invoke(LayoutInflater.from(this))
-

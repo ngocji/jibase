@@ -1,6 +1,7 @@
 package comx.y.z.kotlinbase
 
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.jibase.utils.FragmentUtils
 import com.jibase.utils.Log
@@ -17,14 +18,5 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 .setFragment(MainFragment())
                 .addToBackStack(true)
         )
-
-        FragmentUtils.handleBackPress(this) {stackCount->
-            if (stackCount == 0) {
-
-                true
-            }else {
-                false
-            }
-        }
     }
 }

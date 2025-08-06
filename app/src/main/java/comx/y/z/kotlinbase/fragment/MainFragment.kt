@@ -18,7 +18,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.buttonRequestPermission.setOnClickListener {
+        binding.list.setOnClickListener {
             FragmentUtils.add(
                 FragmentUtils.ReplaceOption
                     .with(requireActivity())

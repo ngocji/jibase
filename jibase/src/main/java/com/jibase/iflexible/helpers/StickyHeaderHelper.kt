@@ -217,7 +217,7 @@ class StickyHeaderHelper<T : IFlexible<*>>(
             if (mElevation > 0) {
                 // Needed to elevate the view
                 mStickyHolderLayout?.also {
-                    ViewCompat.setBackground(it, holder.background)
+                    it.background = holder.background
                 }
             }
         }

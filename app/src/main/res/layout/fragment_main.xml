@@ -6,15 +6,8 @@
     android:orientation="vertical">
 
     <com.jibase.view.OptionItemView
+        android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:ot_desc="Desc"
-        app:ot_title="Title" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/buttonRequestPermission"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        android:text="Request permission" />
+        app:ot_title="List" />
 </LinearLayout>

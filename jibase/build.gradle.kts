@@ -9,6 +9,12 @@ plugins {
 
 android {
     namespace = "com.jibase"
+    compileSdk = 35
+    
+    defaultConfig {
+        targetSdk = 35
+        minSdk = 21
+    }
 
     buildFeatures {
         viewBinding = true
