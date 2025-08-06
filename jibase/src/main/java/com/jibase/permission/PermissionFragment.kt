@@ -3,30 +3,21 @@ package com.jibase.permission
 import android.annotation.TargetApi
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 
 class PermissionFragment : Fragment() {
-    companion object {
-        const val REQ_PERMISSION = 1
-    }
+    private val launchMultiplePermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            resultAction?.invoke(result)
+        }
 
-    private var resultAction: ((Array<out String>, IntArray) -> Unit)? = null
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQ_PERMISSION) return
-        resultAction?.invoke(permissions, grantResults)
-    }
+    private var resultAction: ((Map<String, Boolean>) -> Unit)? = null
 
     @TargetApi(Build.VERSION_CODES.M)
-    fun requests(permissions: List<String>, action: (Array<out String>, IntArray) -> Unit) {
+    fun requests(permissions: List<String>, action: (Map<String, Boolean>) -> Unit) {
         resultAction = action
-        requestPermissions(permissions.toTypedArray(), REQ_PERMISSION)
+        launchMultiplePermission.launch(permissions.toTypedArray())
     }
 
     @TargetApi(Build.VERSION_CODES.M)

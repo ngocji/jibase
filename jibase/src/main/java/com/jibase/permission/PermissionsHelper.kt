@@ -1,6 +1,5 @@
 package com.jibase.permission
 
-import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.fragment.app.Fragment
@@ -23,12 +22,12 @@ class PermissionsHelper<T> private constructor(val target: T) {
     private var permissionFragment: PermissionFragment? = null
     private val permissionsRequests = mutableListOf<String>()
 
-    private var onGrant: (() -> Unit)? = null
+    private var onGrant: ((List<Permission>) -> Unit)? = null
     private var onDeny: ((List<Permission>) -> Unit)? = null
     private var onRevoke: ((List<Permission>) -> Unit)? = null
 
     init {
-        getLazyPermissionFragment(target)
+        getLazyPermissionFragment()
     }
 
     // region main
@@ -38,7 +37,7 @@ class PermissionsHelper<T> private constructor(val target: T) {
         return this
     }
 
-    fun onGrant(onGrant: () -> Unit): PermissionsHelper<T> {
+    fun onGrant(onGrant: (List<Permission>) -> Unit): PermissionsHelper<T> {
         this.onGrant = onGrant
         return this
     }
@@ -86,6 +85,7 @@ class PermissionsHelper<T> private constructor(val target: T) {
                         )
                     )
                 }
+
                 isRevoked(per) -> {
                     val permission = Permission(
                         per, granted = false,
@@ -100,15 +100,16 @@ class PermissionsHelper<T> private constructor(val target: T) {
             }
         }
 
-        getPermissionFragment().requests(unRequestPermission) { permissions, grants ->
-            permissions.forEachIndexed { index, per ->
-                val granted = grants[index] == PackageManager.PERMISSION_GRANTED
+        getPermissionFragment().requests(unRequestPermission) { resultMap ->
+
+            resultMap.forEach { entry ->
+                val per = entry.key
+                val granted = entry.value
                 val shouldShowRequestPermissionRationale =
                     shouldShowRequestPermissionRationale(
                         getPermissionFragment().requireActivity(),
                         per
                     )
-
                 val permission = Permission(
                     per,
                     granted = granted,
@@ -122,12 +123,13 @@ class PermissionsHelper<T> private constructor(val target: T) {
                 }
             }
 
-
             when {
-                allPermission.all { it.granted } -> onGrant?.invoke()
+                allPermission.all { it.granted } -> onGrant?.invoke(allPermission)
                 denyPermission.isNotEmpty() -> onDeny?.invoke(denyPermission)
                 revokePermission.isNotEmpty() -> onRevoke?.invoke(revokePermission)
             }
+
+            releasePermissionFragment()
         }
     }
 
@@ -157,8 +159,8 @@ class PermissionsHelper<T> private constructor(val target: T) {
 
     // endregion
 
-    // region init permission fragment
-    private fun getLazyPermissionFragment(target: T) {
+    // region init / release permission fragment
+    private fun getLazyPermissionFragment() {
         val tag = PermissionFragment::class.java.name
         val fragmentManager = when (target) {
             is FragmentActivity -> target.supportFragmentManager
@@ -168,15 +170,29 @@ class PermissionsHelper<T> private constructor(val target: T) {
         permissionFragment = fragmentManager.findFragmentByTag(tag) as? PermissionFragment
             ?: // create newInstance
                     PermissionFragment().apply {
-                        try {
+                        runCatching {
                             // add to manager
                             fragmentManager.beginTransaction()
                                 .add(this, tag)
                                 .commitNowAllowingStateLoss()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
                     }
+    }
+
+    private fun releasePermissionFragment() {
+        val tag = PermissionFragment::class.java.name
+        val fragmentManager = when (target) {
+            is FragmentActivity -> target.supportFragmentManager
+            is Fragment -> target.childFragmentManager
+            else -> throw NullPointerException("Target must not be null")
+        }
+        kotlin.runCatching {
+            fragmentManager.findFragmentByTag(tag)?.let {
+                fragmentManager.beginTransaction()
+                    .remove(it)
+                    .commitNowAllowingStateLoss()
+            }
+        }
     }
     // endregion
 

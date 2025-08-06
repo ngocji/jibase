@@ -9,6 +9,7 @@ import com.jibase.utils.FragmentUtils
 import comx.y.z.kotlinbase.R
 import comx.y.z.kotlinbase.databinding.FragmentMainBinding
 import comx.y.z.kotlinbase.fragment.list.ListFragment
+import comx.y.z.kotlinbase.fragment.requestpermission.RequestPermissionFragment
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -19,13 +20,20 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.list.setOnClickListener {
-            FragmentUtils.add(
-                FragmentUtils.ReplaceOption
-                    .with(requireActivity())
-                    .setContainerId(R.id.flReplace)
-                    .setFragment(ListFragment())
-                    .addToBackStack(true)
-            )
+            start(ListFragment())
         }
+        binding.permission.setOnClickListener {
+            start(RequestPermissionFragment())
+        }
+    }
+
+    private fun start(fragment: Fragment) {
+        FragmentUtils.add(
+            FragmentUtils.ReplaceOption
+                .with(requireActivity())
+                .setContainerId(R.id.flReplace)
+                .setFragment(fragment)
+                .addToBackStack(true)
+        )
     }
 }
