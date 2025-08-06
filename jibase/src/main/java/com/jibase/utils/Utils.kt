@@ -1,5 +1,6 @@
 package com.jibase.utils
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.graphics.Paint
@@ -7,13 +8,16 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.util.TypedValue
 import android.view.Menu
+import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 
 object Utils {
     fun getColorByAttr(context: Context, attrId: Int): Int {
@@ -95,6 +99,46 @@ object Utils {
             val windowInsetsController =
                 WindowCompat.getInsetsController(activity.window, activity.window.decorView)
             windowInsetsController.isAppearanceLightStatusBars = enable
+        }
+    }
+
+    @SuppressLint("WrongConstant")
+    fun setSystemBarsVisibility(
+        activity: Activity,
+        visible: Boolean,
+        @WindowInsetsCompat.Type.InsetsType type: Int,
+        behavior: Int = 1 // default
+    ) {
+        kotlin.runCatching {
+            val window = activity.window ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val controller = window.insetsController ?: return
+                if (visible) {
+                    controller.show(type)
+                } else {
+                    controller.hide(type)
+                    controller.systemBarsBehavior = behavior
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val decorView = window.decorView
+                decorView.systemUiVisibility = when {
+                    visible -> View.SYSTEM_UI_FLAG_VISIBLE
+
+                    type == WindowInsetsCompat.Type.statusBars() -> View.SYSTEM_UI_FLAG_FULLSCREEN
+
+                    type == WindowInsetsCompat.Type.navigationBars() -> View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+
+                    else -> View.SYSTEM_UI_FLAG_FULLSCREEN or
+                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                }
+            }
         }
     }
 }
