@@ -16,4 +16,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:ot_title="Permission" />
+
+    <com.jibase.view.OptionItemView
+        android:id="@+id/stateflow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:ot_title="StateFlow" />
 </LinearLayout>

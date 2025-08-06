@@ -10,6 +10,7 @@ import comx.y.z.kotlinbase.R
 import comx.y.z.kotlinbase.databinding.FragmentMainBinding
 import comx.y.z.kotlinbase.fragment.list.ListFragment
 import comx.y.z.kotlinbase.fragment.requestpermission.RequestPermissionFragment
+import comx.y.z.kotlinbase.fragment.stateflow.StateFlowFragment
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -24,6 +25,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
         binding.permission.setOnClickListener {
             start(RequestPermissionFragment())
+        }
+        binding.stateflow.setOnClickListener {
+            start(StateFlowFragment())
         }
     }
 

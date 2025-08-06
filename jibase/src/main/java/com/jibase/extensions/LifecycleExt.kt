@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -95,6 +96,14 @@ fun <T> Fragment.collectNotNull(flow: Flow<T?>, action: suspend (value: T) -> Un
 fun <T> Fragment.collectWhenResume(flow: Flow<T>, action: suspend (value: T) -> Unit) {
     viewLifecycleOwner.collectAtLifecycle<T> {
         flow.collectLatest(action)
+    }
+}
+
+fun <T> Fragment.collect(channel: Channel<T>, action: suspend (value: T) -> Unit) {
+    viewLifecycleOwner.collectAtLifecycle<T> {
+        for (value in channel) {
+            action.invoke(value)
+        }
     }
 }
 
