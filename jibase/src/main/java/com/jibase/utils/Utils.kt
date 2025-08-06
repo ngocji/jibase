@@ -1,5 +1,6 @@
 package com.jibase.utils
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -8,7 +9,11 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Menu
+import android.view.WindowManager
 import android.widget.TextView
+import androidx.annotation.ColorRes
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 
 object Utils {
     fun getColorByAttr(context: Context, attrId: Int): Int {
@@ -70,6 +75,26 @@ object Utils {
     fun tintStrokeDrawable(color: Int, background: Drawable) {
         if (background is GradientDrawable) {
             background.setStroke(3, color)
+        }
+    }
+
+    fun setStatusBarColor(activity: Activity, @ColorRes color: Int) {
+        val window = activity.window
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = ContextCompat.getColor(activity, color)
+    }
+
+    fun setStatusBarColorInt(activity: Activity, color: Int) {
+        val window = activity.window
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = color
+    }
+
+    fun setAppearanceLightStatusBar(activity: Activity, enable: Boolean) {
+        kotlin.runCatching {
+            val windowInsetsController =
+                WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+            windowInsetsController.isAppearanceLightStatusBars = enable
         }
     }
 }
