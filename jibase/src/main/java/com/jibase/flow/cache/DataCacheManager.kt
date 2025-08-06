@@ -1,37 +1,40 @@
 package com.jibase.flow.cache
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @Suppress("UNCHECKED_CAST")
-class DataCacheManager {
+class DataCacheManager(private val scope: CoroutineScope) {
     private val dataCache = mutableMapOf<String, CacheModel<*, *>>()
 
     fun <T, P> getData(
-        scope: CoroutineScope,
         cacheKey: String,
         params: P,
         initialValue: T,
+        context: CoroutineDispatcher = Dispatchers.IO,
+        forceRefresh: Boolean = false,
         dataSource: (P) -> Flow<T>
     ): StateFlow<T> {
-        val cacheModel = dataCache[cacheKey] as? CacheModel<T, P>
-        if (cacheModel != null) {
-            return cacheModel.stateFlow
+        val existing = dataCache[cacheKey] as? CacheModel<T, P>
+        if (!forceRefresh && existing != null && params == existing.params) {
+            return existing.stateFlow
         }
 
-
-        val newStateFlow = dataSource(params)
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = initialValue
-            )
+        val newStateFlow = existing?.stateFlow ?: MutableStateFlow(initialValue)
         val newCacheModel = CacheModel(params, dataSource, newStateFlow)
         dataCache[cacheKey] = newCacheModel
 
+        scope.launch(context) {
+            dataSource(params)
+                .collect { value ->
+                    newStateFlow.value = value
+                }
+        }
         return newStateFlow
     }
 
