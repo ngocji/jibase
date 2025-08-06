@@ -33,10 +33,10 @@ dependencies {
 
 publishing {
     publications {
-        create<MavenPublication>("jibasePublication") {
+        create<MavenPublication>("jibase-di") {
             groupId = "com.ngocji"
             artifactId = "jibase"
-            version = "4.2.9-pre3"
+            version = "4.3.3"
         }
     }
 }
