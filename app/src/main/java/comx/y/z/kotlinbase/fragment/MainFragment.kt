@@ -8,10 +8,11 @@ import com.jibase.extensions.viewBinding
 import com.jibase.utils.FragmentUtils
 import comx.y.z.kotlinbase.R
 import comx.y.z.kotlinbase.databinding.FragmentMainBinding
+import comx.y.z.kotlinbase.fragment.cache.CacheFragment
 import comx.y.z.kotlinbase.fragment.list.ListFragment
 import comx.y.z.kotlinbase.fragment.pager.PagerFragment
 import comx.y.z.kotlinbase.fragment.requestpermission.RequestPermissionFragment
-import comx.y.z.kotlinbase.fragment.stateflow.StateFlowFragment
+import comx.y.z.kotlinbase.fragment.stateflow.ChannelFlowFragment
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -27,11 +28,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         binding.permission.setOnClickListener {
             start(RequestPermissionFragment())
         }
-        binding.stateflow.setOnClickListener {
-            start(StateFlowFragment())
+        binding.channelflow.setOnClickListener {
+            start(ChannelFlowFragment())
         }
         binding.pager.setOnClickListener {
             start(PagerFragment())
+        }
+        binding.cacheData.setOnClickListener {
+            start(CacheFragment())
         }
     }
 

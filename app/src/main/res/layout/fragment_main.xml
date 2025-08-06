@@ -22,10 +22,16 @@
         app:ot_title="Permission" />
 
     <com.jibase.view.OptionItemView
-        android:id="@+id/stateflow"
+        android:id="@+id/channelflow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:ot_title="StateFlow" />
+        app:ot_title="ChannelFlow" />
+
+    <com.jibase.view.OptionItemView
+        android:id="@+id/cacheData"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:ot_title="CacheDataManager" />
 
     <com.jibase.view.OptionItemView
         android:id="@+id/pager"
