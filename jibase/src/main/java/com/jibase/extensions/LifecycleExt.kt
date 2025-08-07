@@ -107,6 +107,14 @@ fun <T> Fragment.collect(channel: Channel<T>, action: suspend (value: T) -> Unit
     }
 }
 
+fun <T> FragmentActivity.collect(channel: Channel<T>, action: suspend (value: T) -> Unit) {
+    collectAtLifecycle<T> {
+        for (value in channel) {
+            action.invoke(value)
+        }
+    }
+}
+
 fun <T> Fragment.run(flow: Flow<T>) {
     viewLifecycleOwner.collectAtLifecycle<T> {
         flow.collect {}
