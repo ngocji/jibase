@@ -158,6 +158,11 @@ class ActionModeHelper(
         }
     }
 
+    fun selectAll(vararg viewTypes: Int) {
+        adapter.selectAll(*viewTypes)
+        updateContextTitle(adapter.getSelectedItemCount())
+    }
+
 
     private fun updateContextTitle(count: Int) {
         if (callback != null) {
