@@ -7,17 +7,45 @@ import com.jibase.utils.Log
 import java.lang.reflect.Type
 
 @Suppress("SpellCheckingInspection")
-class SharePref(context: Context, prefName: String) {
+class SharePref(context: Context, prefName: String) : SharedPreferences.OnSharedPreferenceChangeListener {
     private val pref: SharedPreferences by lazy {
         context.getSharedPreferences(prefName, Context.MODE_PRIVATE)
     }
 
-    fun registerChange(sharedPreferences: SharedPreferences.OnSharedPreferenceChangeListener) {
-        pref.registerOnSharedPreferenceChangeListener(sharedPreferences)
+    private var isRegistedChange = false
+
+    private val listeners = mutableSetOf<SharedPreferences.OnSharedPreferenceChangeListener>()
+
+    override fun onSharedPreferenceChanged(
+        sharedPreferences: SharedPreferences?,
+        key: String?
+    ) {
+        synchronized(this) {
+            listeners.forEach {
+                it.onSharedPreferenceChanged(sharedPreferences, key)
+            }
+        }
+    }
+
+    fun registerChange(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        synchronized(this) {
+            if (!isRegistedChange) {
+                pref.registerOnSharedPreferenceChangeListener(this)
+                isRegistedChange = true
+            }
+
+            listeners.add(listener)
+        }
     }
 
     fun unregisterChange(sharedPreferences: SharedPreferences.OnSharedPreferenceChangeListener) {
-        pref.unregisterOnSharedPreferenceChangeListener(sharedPreferences)
+        synchronized(this) {
+            listeners.remove(sharedPreferences)
+            if (listeners.isEmpty()) {
+                pref.unregisterOnSharedPreferenceChangeListener(this)
+                isRegistedChange = false
+            }
+        }
     }
 
     fun getBoolean(key: String, defaultValue: Boolean) =
