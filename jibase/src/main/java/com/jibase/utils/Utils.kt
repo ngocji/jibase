@@ -12,12 +12,14 @@ import android.os.Build
 import android.util.TypedValue
 import android.view.Menu
 import android.view.View
+import android.view.Window
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 object Utils {
     fun getColorByAttr(context: Context, attrId: Int): Int {
@@ -109,10 +111,23 @@ object Utils {
         @WindowInsetsCompat.Type.InsetsType type: Int,
         behavior: Int = 1 // default
     ) {
+        setSystemBarsVisibility(activity.window, visible, type, behavior)
+    }
+
+    @SuppressLint("WrongConstant")
+    fun setSystemBarsVisibility(
+        window: Window?,
+        visible: Boolean,
+        @WindowInsetsCompat.Type.InsetsType type: Int,
+        behavior: Int = 1 // default
+    ) {
+        window ?: return
         kotlin.runCatching {
-            val window = activity.window ?: return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val controller = window.insetsController ?: return
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+
+                val controller =  WindowInsetsControllerCompat(window, window.decorView)
+
                 if (visible) {
                     controller.show(type)
                 } else {
@@ -139,6 +154,33 @@ object Utils {
                             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 }
             }
+        }
+    }
+
+    fun setWindowNoLimit(activity: Activity?) {
+        setWindowNoLimit(activity?.window)
+    }
+
+    fun setWindowNoLimit(window: Window?) {
+        window?.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+    }
+
+    fun clearWindowNoLimit(activity: Activity?) {
+        val window = activity?.window
+        clearWindowNoLimit(window)
+    }
+
+    fun clearWindowNoLimit(window: Window?) {
+        window ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // API 30+ (Android 11+):
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+        } else {
+            // API < 30: clear
+            window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
     }
 }
