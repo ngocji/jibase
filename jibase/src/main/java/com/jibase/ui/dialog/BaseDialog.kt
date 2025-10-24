@@ -2,7 +2,6 @@ package com.jibase.ui.dialog
 
 import android.app.Dialog
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +10,7 @@ import android.view.Window
 import androidx.annotation.LayoutRes
 import androidx.annotation.StyleRes
 import androidx.appcompat.view.ContextThemeWrapper
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import com.jibase.R
@@ -43,7 +43,10 @@ abstract class BaseDialog(
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.run {
             requestWindowFeature(Window.FEATURE_NO_TITLE)
-            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            window?.also {
+                it.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+                doOnWindow(it)
+            }
         }
         return dialog
     }
@@ -76,6 +79,8 @@ abstract class BaseDialog(
     open fun isShowFullDialog() = false
 
     abstract fun onViewReady(savedInstanceState: Bundle?)
+
+    open fun doOnWindow(window: Window) {}
 
     fun show(fragmentManager: FragmentManager): Boolean {
         try {

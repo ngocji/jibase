@@ -2,7 +2,6 @@ package com.jibase.ui.dialog
 
 import android.app.Dialog
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +15,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.jibase.R
+import androidx.core.graphics.drawable.toDrawable
 
 abstract class BaseBottomDialog(
     @LayoutRes private val layoutId: Int,
@@ -44,16 +44,18 @@ abstract class BaseBottomDialog(
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.run {
             requestWindowFeature(Window.FEATURE_NO_TITLE)
-            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            window?.also {
+                it.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+                doOnWindow(it)
+            }
+            setOnShowListener { dialog ->
+                val d = dialog as BottomSheetDialog
 
-            if (isShowFullDialog()) {
-                setOnShowListener { dialog ->
-                    val d = dialog as BottomSheetDialog
+                val bottomSheet =
+                    d.findViewById<View>(R.id.design_bottom_sheet) ?: return@setOnShowListener
 
-                    val bottomSheet =
-                        d.findViewById<View>(R.id.design_bottom_sheet) ?: return@setOnShowListener
-
-                    BottomSheetBehavior.from(bottomSheet).state = BottomSheetBehavior.STATE_EXPANDED
+                BottomSheetBehavior.from(bottomSheet).run {
+                    doOnSheetBehavior(this)
                 }
             }
         }
@@ -74,6 +76,18 @@ abstract class BaseBottomDialog(
     }
 
     open fun isShowFullDialog(): Boolean = false
+
+    open fun isDraggable(): Boolean = true
+
+    open fun doOnWindow(window: Window) {}
+
+    open fun doOnSheetBehavior(behavior: BottomSheetBehavior<View>) {
+        if (isShowFullDialog()) {
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        }
+
+        behavior.isDraggable = isDraggable()
+    }
 
     abstract fun onViewReady(savedInstanceState: Bundle?)
 
