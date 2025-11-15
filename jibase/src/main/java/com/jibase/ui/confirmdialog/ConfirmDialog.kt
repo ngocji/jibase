@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.Window
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorInt
@@ -59,6 +60,10 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         binding.buttonConfirm.setOnClickListener { onConfirmClicked() }
         binding.buttonCancel.setOnClickListener { onCancelClicked() }
         binding.buttonClose.setOnClickListener { onCancelClicked() }
+    }
+
+    override fun doOnWindow(window: Window) {
+        builder?.doOnWindowCallback?.invoke(window)
     }
 
     private fun onCancelClicked() {
@@ -231,6 +236,7 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         fun onConfirmClicked(dialog: ConfirmDialog?) {}
         fun onCancelClicked(dialog: ConfirmDialog) {}
         fun onDismiss() {}
+        fun doOnWindow(window: Window) {}
     }
 
     class Builder(
@@ -249,6 +255,8 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
                 )
             )
         val buttonCancel = ConfigButton()
+
+        var doOnWindowCallback: ((Window) -> Unit)? = null
 
         // config
         fun setIcon(@DrawableRes res: Int): Builder {
@@ -581,6 +589,11 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
 
         fun setShowCancelButton(show: Boolean): Builder {
             buttonCancel.isShow = show
+            return this
+        }
+
+        fun setDoOnWindowCallback(callback: (Window) -> Unit): Builder {
+            doOnWindowCallback = callback
             return this
         }
 

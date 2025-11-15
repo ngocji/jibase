@@ -19,5 +19,5 @@ data class ConfigDialog(
 
     var background: Drawable? = null,
     @DrawableRes
-    var backgroundResource: Int = 0
+    var backgroundResource: Int = 0,
 )
