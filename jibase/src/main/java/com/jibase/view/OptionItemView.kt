@@ -2,11 +2,13 @@ package com.jibase.view
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.CompoundButton
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.ImageViewCompat
 import com.jibase.R
 import com.jibase.databinding.LayoutOptionItemBinding
@@ -82,6 +84,9 @@ class OptionItemView @JvmOverloads constructor(
                     -1
                 )
             )
+            setIconGravity(
+                typeArray.getInt(R.styleable.OptionItemView_ot_icon_gravity, -1)
+            )
             val stateIconColor =
                 typeArray.getColorStateList(R.styleable.OptionItemView_ot_icon_tint)
             if (stateIconColor != null) {
@@ -121,9 +126,12 @@ class OptionItemView @JvmOverloads constructor(
 
             setType(Type.safe(typeArray.getInt(R.styleable.OptionItemView_ot_type, -1)))
 
-            binding.line.isVisible =
-                typeArray.getBoolean(R.styleable.OptionItemView_ot_show_line, true)
-
+            updateLineUI(
+                typeArray.getBoolean(R.styleable.OptionItemView_ot_show_line, true),
+                typeArray.getDimensionPixelOffset(R.styleable.OptionItemView_ot_line_margin, -1),
+                typeArray.getBoolean(R.styleable.OptionItemView_ot_line_fill_width, false),
+                typeArray.getColor(R.styleable.OptionItemView_ot_line_color, Color.TRANSPARENT)
+            )
             typeArray.recycle()
         }
     }
@@ -198,6 +206,26 @@ class OptionItemView @JvmOverloads constructor(
     fun setIconSize(size: Int) {
         if (size <= 0) return
         binding.imageIcon.setLayoutParams(width = size, height = size)
+    }
+
+    fun setIconGravity(gravity: Int) {
+        if (gravity == -1) return
+        binding.imageIcon.updateLayoutParams<LayoutParams> {
+            when (gravity) {
+                0 -> {
+                    topToTop = R.id.ll
+                    bottomToBottom = LayoutParams.UNSET
+                }
+                1 -> {
+                    topToTop = LayoutParams.PARENT_ID
+                    bottomToBottom = LayoutParams.PARENT_ID
+                }
+                2 -> {
+                    topToTop = R.id.ll
+                    bottomToBottom = R.id.ll
+                }
+            }
+        }
     }
 
     fun setIconTint(color: Int) {
@@ -286,6 +314,27 @@ class OptionItemView @JvmOverloads constructor(
             setButtonDrawable(res)
             thumbDrawable = null
             background = null
+        }
+    }
+
+    fun updateLineUI(visible: Boolean, margin: Int, fillWidth: Boolean, tintColor: Int) {
+        binding.line.apply {
+            isVisible = visible
+            if (visible) {
+                if (tintColor != 0) {
+                    alpha = 1f
+                    backgroundTintList = ColorStateList.valueOf(tintColor)
+                } else {
+                    backgroundTintList = null
+                    alpha = 0.2f
+                }
+            }
+            updateLayoutParams<LayoutParams> {
+                setMargins(left, margin, right, bottom)
+                if (fillWidth) {
+                    startToStart = LayoutParams.PARENT_ID
+                }
+            }
         }
     }
 }
