@@ -42,7 +42,6 @@ abstract class BaseDialog(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.run {
-            requestWindowFeature(Window.FEATURE_NO_TITLE)
             window?.also {
                 it.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
                 doOnWindow(it)

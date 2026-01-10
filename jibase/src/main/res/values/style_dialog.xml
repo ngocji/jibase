@@ -4,19 +4,21 @@
     <style name="style_dialog_100" parent="Theme.MaterialComponents.Dialog">
         <item name="android:windowMinWidthMajor">100%</item>
         <item name="android:windowMinWidthMinor">100%</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
-    <style name="style_dialog_95" parent="Theme.MaterialComponents.Dialog">
+    <style name="style_dialog_95" parent="style_dialog_100">
         <item name="android:windowMinWidthMajor">95%</item>
         <item name="android:windowMinWidthMinor">95%</item>
     </style>
 
-    <style name="style_dialog_90" parent="Theme.MaterialComponents.Dialog">
+    <style name="style_dialog_90" parent="style_dialog_100">
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
     </style>
 
-    <style name="style_dialog_80" parent="Theme.MaterialComponents.Dialog">
+    <style name="style_dialog_80" parent="style_dialog_100">
         <item name="android:windowMinWidthMajor">80%</item>
         <item name="android:windowMinWidthMinor">80%</item>
     </style>
