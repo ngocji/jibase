@@ -5,10 +5,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import com.jibase.utils.Log
 
 class PermissionFragment : Fragment() {
     private val launchMultiplePermission =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            Log.d("ResultPermission: $result -> ${resultAction}")
             resultAction?.invoke(result)
         }
 

@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import com.jibase.utils.Log
 
 class PermissionsHelper<T> private constructor(val target: T) {
     companion object {
@@ -100,36 +101,53 @@ class PermissionsHelper<T> private constructor(val target: T) {
             }
         }
 
-        getPermissionFragment().requests(unRequestPermission) { resultMap ->
-
-            resultMap.forEach { entry ->
-                val per = entry.key
-                val granted = entry.value
-                val shouldShowRequestPermissionRationale =
-                    shouldShowRequestPermissionRationale(
-                        getPermissionFragment().requireActivity(),
-                        per
-                    )
-                val permission = Permission(
-                    per,
-                    granted = granted,
-                    shouldShowRequestPermissionRationale = shouldShowRequestPermissionRationale
-                )
-                allPermission.add(permission)
-
-                when {
-                    isRevoked(per) -> revokePermission.add(permission)
-                    !isGranted(per) -> denyPermission.add(permission)
-                }
-            }
-
+        fun resultPermissions() {
+            releasePermissionFragment()
+            Log.d("Result: ${allPermission.joinToString { it.name }}" +
+                    "\nDenyPermission: ${denyPermission.joinToString { it.name }}" +
+                    "\nRevokePermission: ${revokePermission.joinToString { it.name }}" +
+                    "\nUnRequestPermission: $unRequestPermission" +
+                    "\nOnGrant=${onGrant}, onDeny=${onDeny}, onRevoke=${onRevoke}")
             when {
                 allPermission.all { it.granted } -> onGrant?.invoke(allPermission)
                 denyPermission.isNotEmpty() -> onDeny?.invoke(denyPermission)
                 revokePermission.isNotEmpty() -> onRevoke?.invoke(revokePermission)
             }
+        }
 
-            releasePermissionFragment()
+        Log.d("Per: ${getPermissionFragment()}" +
+                "\nAllPermission: ${allPermission.joinToString { it.name }}" +
+                "\nDenyPermission: ${denyPermission.joinToString { it.name }}" +
+                "\nRevokePermission: ${revokePermission.joinToString { it.name }}" +
+                "\nUnRequestPermission: $unRequestPermission")
+        if (unRequestPermission.isNotEmpty()) {
+            getPermissionFragment().requests(unRequestPermission) { resultMap ->
+                Log.d("resultMap: ${resultMap.keys.joinToString { "${it}: ${resultMap[it]}" }}")
+                resultMap.forEach { entry ->
+                    val per = entry.key
+                    val granted = entry.value
+                    val shouldShowRequestPermissionRationale =
+                        shouldShowRequestPermissionRationale(
+                            getPermissionFragment().requireActivity(),
+                            per
+                        )
+                    val permission = Permission(
+                        per,
+                        granted = granted,
+                        shouldShowRequestPermissionRationale = shouldShowRequestPermissionRationale
+                    )
+                    allPermission.add(permission)
+
+                    when {
+                        isRevoked(per) -> revokePermission.add(permission)
+                        !isGranted(per) -> denyPermission.add(permission)
+                    }
+                }
+
+                resultPermissions()
+            }
+        } else {
+            resultPermissions()
         }
     }
 
@@ -193,6 +211,9 @@ class PermissionsHelper<T> private constructor(val target: T) {
                     .commitNowAllowingStateLoss()
             }
         }
+            .onFailure {
+                Log.d("Error release permission fragment")
+            }
     }
     // endregion
 
