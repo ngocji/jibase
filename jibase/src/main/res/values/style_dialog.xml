@@ -25,6 +25,8 @@
 
     <style name="style_transparent_bottom_sheet" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/style_bottom_sheet_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowNoTitle">true</item>
     </style>
 
     <style name="style_bottom_sheet_background" parent="Widget.Design.BottomSheet.Modal">

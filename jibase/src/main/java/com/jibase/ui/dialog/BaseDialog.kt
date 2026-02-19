@@ -68,7 +68,7 @@ abstract class BaseDialog(
     }
 
     open fun setStyle() {
-        setStyle(STYLE_NO_TITLE, initStyle())
+        setStyle(STYLE_NORMAL, initStyle())
     }
 
     open fun initStyle(): Int {
