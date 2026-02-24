@@ -1,3 +1,6 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +10,10 @@ plugins {
     kotlin("kapt")
 }
 
+val buildDate: String by lazy {
+    SimpleDateFormat("ddMMyy").format(Date())
+}
+
 android {
     namespace = "com.jibase"
     compileSdk = 35
@@ -14,11 +21,20 @@ android {
     defaultConfig {
         targetSdk = 35
         minSdk = 21
+        buildConfigField("String", "VERSION", "\"${buildDate}\"")
         consumerProguardFiles("proguard-rules.pro")
     }
 
     buildFeatures {
+        buildConfig = true
         viewBinding = true
+    }
+
+    libraryVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.LibraryVariantOutputImpl
+            output.outputFileName = "jibase-$buildDate.aar"
+        }
     }
 }
 

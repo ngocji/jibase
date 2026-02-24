@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.jibase.BuildConfig
 
 object Utils {
     fun getColorByAttr(context: Context, attrId: Int): Int {
@@ -183,4 +184,6 @@ object Utils {
             window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
     }
+
+    fun getLibVersion() = BuildConfig.VERSION
 }

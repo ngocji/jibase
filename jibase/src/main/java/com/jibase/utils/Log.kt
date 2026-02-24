@@ -48,7 +48,7 @@ object Log {
     private fun createMessage(string: String): List<String> {
         return listOf(
             "********************************",
-            "Class: ${getClassName()} (${getMethodName()} : ${getLineNumber()})",
+            "[${BuildConfig.VERSION}] Class: ${getClassName()} (${getMethodName()} : ${getLineNumber()})",
             "$string",
             "********************************"
         )
