@@ -13,7 +13,8 @@ data class ConfigDialog(
     @GravityInt
     var iconGravity: Int = Gravity.CENTER,
     var isCancelable: Boolean = true,
-    var closeIcon: Bitmap? = null,
+    @DrawableRes
+    var closeIconResource: Int? = null,
     var dismissWhenClick: Boolean = true,
     var callBack: ConfirmDialog.CallBack? = null,
 

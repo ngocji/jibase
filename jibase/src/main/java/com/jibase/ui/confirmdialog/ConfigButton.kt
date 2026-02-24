@@ -20,7 +20,7 @@ data class ConfigButton(
 
     var background: Drawable? = null,
     @ColorInt
-    var backgroundColor: Int = 0x0,
+    var backgroundColor: Int? = null,
 
     var icon: Drawable? = null,
     @DrawableRes

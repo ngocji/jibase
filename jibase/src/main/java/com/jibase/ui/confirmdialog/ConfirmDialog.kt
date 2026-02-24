@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -19,6 +20,7 @@ import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.widget.TextViewCompat
 import com.google.android.material.button.MaterialButton
@@ -110,6 +112,10 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         }
 
         isCancelable = config.isCancelable
+        config.closeIconResource?.let {
+            binding.buttonClose.isVisible = true
+            binding.buttonClose.setIconResource(it)
+        }
 
         when {
             config.backgroundResource > 0 -> binding.dialogBackground.setBackgroundResource(config.backgroundResource)
@@ -210,16 +216,13 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
     private fun applyButtonBackground(button: MaterialButton, configButton: ConfigButton) {
         with(button) {
             when {
-                configButton.backgroundColor != 0x0 -> {
-                    backgroundTintList = ColorStateList.valueOf(configButton.backgroundColor)
+                configButton.backgroundColor != null -> {
+                    backgroundTintList =
+                        ColorStateList.valueOf(configButton.backgroundColor ?: Color.TRANSPARENT)
                 }
 
                 configButton.background != null -> {
                     background = configButton.background
-                }
-
-                else -> {
-                    backgroundTintList = ColorStateList.valueOf(0)
                 }
             }
         }
@@ -289,12 +292,7 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         }
 
         fun setCloseIcon(@DrawableRes res: Int): Builder {
-            config.closeIcon = ContextCompat.getDrawable(context, res)?.toBitmap()
-            return this
-        }
-
-        fun setCloseIcon(bitmap: Bitmap?): Builder {
-            config.closeIcon = bitmap
+            config.closeIconResource = res
             return this
         }
 

@@ -102,7 +102,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonClose"
-        style="@style/Widget.Material3.Button.Icon"
+        style="@style/Widget.Material3.Button.IconButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
@@ -110,5 +110,6 @@
         android:minWidth="0dp"
         android:minHeight="0dp"
         android:visibility="gone"
+        tools:icon="@drawable/ic_error"
         app:iconTint="@null" />
 </androidx.cardview.widget.CardView>
