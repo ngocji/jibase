@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 fun <T> LifecycleOwner.collectAtLifecycle(
@@ -29,15 +30,11 @@ fun <T> FragmentActivity.collect(flow: Flow<T>, action: suspend (value: T) -> Un
 }
 
 fun <T> FragmentActivity.collectOne(
-    flow: MutableStateFlow<T?>,
+    flow: Flow<T>,
     action: suspend (value: T) -> Unit
 ) {
-    collectAtLifecycle<T> {
-        flow.collect {
-            it ?: return@collect
-            action.invoke(it)
-            flow.tryEmit(null)
-        }
+    lifecycleScope.launch {
+        flow.collect { action(it) }
     }
 }
 
@@ -73,13 +70,10 @@ fun <T> Fragment.collect(flow: Flow<T>, action: suspend (value: T) -> Unit) {
     }
 }
 
-fun <T> Fragment.collectOne(flow: MutableStateFlow<T?>, action: suspend (value: T) -> Unit) {
-    viewLifecycleOwner.collectAtLifecycle<T> {
-        flow.collect {
-            it ?: return@collect
-            action.invoke(it)
-            flow.tryEmit(null)
-        }
+fun <T> Fragment.collectOne(flow: Flow<T>,
+                            action: suspend (value: T) -> Unit) {
+    viewLifecycleOwner.lifecycleScope.launch {
+         flow.collect { action(it) }
     }
 }
 
