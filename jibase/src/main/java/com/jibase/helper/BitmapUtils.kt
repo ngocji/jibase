@@ -1,7 +1,11 @@
 package com.jibase.helper
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.NinePatchDrawable
 import androidx.annotation.ColorInt
@@ -13,16 +17,23 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 
 object BitmapUtils {
 
     @WorkerThread
     fun saveBitmapToFile(file: File, bmp: Bitmap, compressFormat: Bitmap.CompressFormat): File {
-        val fos = FileOutputStream(file)
-        bmp.compress(compressFormat, 100, fos)
-        fos.flush()
-        fos.close()
+        saveBitmapTo(FileOutputStream(file), bmp, compressFormat)
         return file
+    }
+
+    @WorkerThread
+    fun saveBitmapTo(fos: OutputStream, bmp: Bitmap, compressFormat: Bitmap.CompressFormat) {
+        runCatching {
+            bmp.compress(compressFormat, 100, fos)
+            fos.flush()
+            fos.close()
+        }
     }
 
     fun decodeBitmapByScreenSize(context: Context, path: String): Bitmap? {
@@ -161,6 +172,7 @@ object BitmapUtils {
                 ExifInterface.ORIENTATION_ROTATE_90,
                 ExifInterface.ORIENTATION_TRANSVERSE,
                 ExifInterface.ORIENTATION_ROTATE_270 -> outWidth to outHeight
+
                 else -> outHeight to outWidth
             }
         }
@@ -226,15 +238,18 @@ object BitmapUtils {
                 matrix.setRotate(180f)
                 matrix.postScale(-1f, 1f)
             }
+
             ExifInterface.ORIENTATION_TRANSPOSE -> {
                 matrix.setRotate(90f)
                 matrix.postScale(-1f, 1f)
             }
+
             ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
             ExifInterface.ORIENTATION_TRANSVERSE -> {
                 matrix.setRotate(-90f)
                 matrix.postScale(-1f, 1f)
             }
+
             ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
             else -> return null
         }
