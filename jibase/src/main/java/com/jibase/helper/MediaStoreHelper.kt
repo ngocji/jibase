@@ -23,11 +23,61 @@ import com.jibase.utils.Log
 import com.jibase.utils.copyFile
 import com.jibase.utils.getMimeType
 import java.io.File
+import java.io.OutputStream
 
 
 @Suppress("DEPRECATION")
 object MediaStoreHelper {
     fun needRequestStoragePermission() = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+
+    fun insert(
+        context: Context,
+        name: String,
+        mimeType: String = getMimeType(name.substringAfterLast(".")).orEmpty(),
+        relativeFolder: String,
+        fileToExportBeforeAndroidQ: File? = null,
+        onInsertFile: (OutputStream) -> Unit,
+    ): Uri? {
+        return try {
+            Log.d("name=$name, mimeType=$mimeType, relativeFolder=$relativeFolder, fileToExportBeforeAndroidQ=${fileToExportBeforeAndroidQ?.absolutePath}")
+            val resultUri: Uri?
+            val values = ContentValues()
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            values.put(MediaStore.MediaColumns.TITLE, name)
+            if (isUserRelativePath()) {
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativeFolder)
+            } else {
+                if (fileToExportBeforeAndroidQ != null) {
+                    values.put(
+                        MediaStore.MediaColumns.DATA,
+                        fileToExportBeforeAndroidQ.absolutePath
+                    )
+                }
+            }
+
+            Log.d("values=${values.keySet().joinToString { "[$it=${values.get(it)}]" }}")
+
+            resultUri = context.contentResolver.insert(
+                getContentUri(mimeType),
+                values
+            )
+            Log.d("InsertUri: content=${getContentUri(mimeType)} => uri=$resultUri")
+            if (resultUri == null) {
+                throw NullPointerException("error")
+            }
+
+            context.contentResolver.openOutputStream(resultUri)?.use {
+                onInsertFile(it)
+            }
+
+            resultUri
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.d("Error: ${e.message}")
+            null
+        }
+    }
 
     fun insert(data: Data): Uri? {
         return try {
@@ -43,7 +93,7 @@ object MediaStoreHelper {
             resultUri = if (isUserRelativePath()) {
                 values.put(MediaStore.MediaColumns.RELATIVE_PATH, data.relativeSaveFolder)
                 data.context.contentResolver.insert(
-                    getContentUri(data.file, data.mimeType),
+                    getContentUri(data.mimeType),
                     values
                 )
             } else {
@@ -55,7 +105,7 @@ object MediaStoreHelper {
                     copyFile(data.file, data.fileToExportBeforeAndroidQ ?: return null)
                 }
                 data.context.contentResolver.insert(
-                    getContentUri(data.file, data.mimeType),
+                    getContentUri(data.mimeType),
                     values
                 )
             }
@@ -82,8 +132,8 @@ object MediaStoreHelper {
     @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
     fun isUserRelativePath() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-    private fun getContentUri(file: File, mimeType: String): Uri {
-        val typeCheck = mimeType.takeIf { it.isNotBlank() } ?: getMimeType(file).orEmpty()
+    private fun getContentUri(mimeType: String): Uri {
+        val typeCheck = mimeType.orEmpty()
         return when {
             typeCheck.startsWith("video") -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             typeCheck.startsWith("image") -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
