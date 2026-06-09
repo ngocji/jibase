@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.CompoundButton
+import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.widget.ImageViewCompat
+import androidx.core.widget.TextViewCompat
 import com.jibase.R
 import com.jibase.databinding.LayoutOptionItemBinding
 import com.jibase.extensions.getDimensionPixelOffset
@@ -54,6 +56,11 @@ class OptionItemView @JvmOverloads constructor(
 
             setTitle(typeArray.getString(R.styleable.OptionItemView_ot_title))
 
+            setTextAppeared(
+                binding.tvTitle,
+                typeArray.getResourceId(R.styleable.OptionItemView_ot_title_text_appearance, -1)
+            )
+
             val stateTitleColor =
                 typeArray.getColorStateList(R.styleable.OptionItemView_ot_title_color)
             if (stateTitleColor != null) {
@@ -63,6 +70,10 @@ class OptionItemView @JvmOverloads constructor(
             }
 
             setDesc(typeArray.getString(R.styleable.OptionItemView_ot_desc))
+            setTextAppeared(
+                binding.tvDesc,
+                typeArray.getResourceId(R.styleable.OptionItemView_ot_desc_text_appearance, -1)
+            )
 
             val stateDescColor =
                 typeArray.getColorStateList(R.styleable.OptionItemView_ot_desc_color)
@@ -192,6 +203,11 @@ class OptionItemView @JvmOverloads constructor(
         binding.tvDesc.setTextColor(color)
     }
 
+    fun setTextAppeared(textView: TextView, styleRes: Int) {
+        if (styleRes <= 0) return
+        TextViewCompat.setTextAppearance(textView, styleRes)
+    }
+
     fun setIcon(iconRes: Int) {
         with(binding.imageIcon) {
             if (iconRes <= 0) {
@@ -216,10 +232,12 @@ class OptionItemView @JvmOverloads constructor(
                     topToTop = R.id.ll
                     bottomToBottom = LayoutParams.UNSET
                 }
+
                 1 -> {
                     topToTop = LayoutParams.PARENT_ID
                     bottomToBottom = LayoutParams.PARENT_ID
                 }
+
                 2 -> {
                     topToTop = R.id.ll
                     bottomToBottom = R.id.ll
