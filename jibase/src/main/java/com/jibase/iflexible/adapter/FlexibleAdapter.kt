@@ -29,6 +29,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -76,9 +81,6 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     private var useDiffUtil = true
     private var diffResult: DiffUtil.DiffResult? = null
     private var diffUtilCallback: FlexibleDiffCallback<T>? = null
-
-    /* Handler for delayed actions */
-    private val mHandler = Handler(Looper.getMainLooper(), HandlerCallback())
 
 
     /* Deleted items and RestoreList (Undo) */
@@ -149,7 +151,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     var onEndlessScrollListener: EndlessScrollListener? = null
     var onDeleteCompleteListener: OnDeleteCompleteListener? = null
     var onStickyHeaderChangeListener: OnStickyHeaderChangeListener? = null
-    private val coroutineScope = CoroutineScope(SupervisorJob())
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 
     init {
@@ -321,8 +323,8 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
     fun release() {
-        mFilterJob?.cancel("Cancelable job filter")
-        mHandler.removeCallbacksAndMessages(null)
+        mFilterJob?.cancel()
+        coroutineScope.coroutineContext.cancelChildren()
     }
 
     /**
@@ -492,8 +494,8 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     fun updateDataSet(items: List<T>, animate: Boolean = false) {
         mOriginalList = mutableListOf() // Reset original list from filter
         if (animate) {
-            mHandler.removeMessages(MSG_UPDATE)
-            mHandler.sendMessage(Message.obtain(mHandler, MSG_UPDATE, items))
+            mFilterJob?.cancel()
+            mFilterJob = filterAsyncTask(MSG_UPDATE, items)
         } else {
             // Copy of the original list
             val newItems = items.toMutableList()
@@ -924,11 +926,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         scrollToPosition: Boolean
     ) {
         Log.d("Enqueued adding scrollable header ($delay ms) $headerItem", TAG)
-        mHandler.postDelayed({
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
             if (addScrollableHeader(headerItem) && scrollToPosition) {
                 smoothScrollToPosition(getGlobalPositionOf(headerItem))
             }
-        }, delay)
+        }
     }
 
     /**
@@ -945,11 +948,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         scrollToPosition: Boolean
     ) {
         Log.d("Enqueued adding scrollable footer ($delay ms) $footerItem", TAG)
-        mHandler.postDelayed({
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
             if (addScrollableFooter(footerItem) && scrollToPosition) {
                 smoothScrollToPosition(getGlobalPositionOf(footerItem))
             }
-        }, delay)
+        }
     }
 
     /**
@@ -962,7 +966,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun removeScrollableHeaderWithDelay(headerItem: T, @IntRange(from = 0) delay: Long) {
         Log.d("Enqueued removing scrollable header ($delay ms) $headerItem", TAG)
-        mHandler.postDelayed({ removeScrollableHeader(headerItem) }, delay)
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
+            removeScrollableHeader(headerItem)
+        }
     }
 
     /**
@@ -975,7 +982,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun removeScrollableFooterWithDelay(footerItem: T, @IntRange(from = 0) delay: Long) {
         Log.d("Enqueued removing scrollable footer ($delay ms) $footerItem", TAG)
-        mHandler.postDelayed({ removeScrollableFooter(footerItem) }, delay)
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
+            removeScrollableFooter(footerItem)
+        }
     }
 
     /**
@@ -1237,7 +1247,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         mStickyContainer = stickyContainer
 
         // Run in post to be sure about the RecyclerView initialization
-        mHandler.post {
+        coroutineScope.launch(Dispatchers.Main) {
             // Enable or Disable the sticky headers layout
             if (sticky) {
                 if (mStickyHeaderHelper == null) {
@@ -1352,14 +1362,14 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         } else {
             Log.d("showAllHeaders with insert notification (in Post!)", TAG)
             // In post, let's notifyItemInserted!
-            mHandler.post(Runnable {
+            coroutineScope.launch(Dispatchers.Main) {
                 // #144 - Check if headers are already shown, discard the call to not duplicate headers
                 if (headersShown) {
                     Log.d(
                         "Double call detected! Headers already shown OR the method showAllHeaders() was already called!",
                         TAG
                     )
-                    return@Runnable
+                    return@launch
                 }
                 showAllHeadersWithReset(false)
                 // #142 - At startup, when insert notifications are performed to show headers
@@ -1371,7 +1381,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 if (firstVisibleItem == 0 && isHeader(getItem(0)) && !isHeader(getItem(1))) {
                     mRecyclerView.scrollToPosition(0)
                 }
-            })
+            }
         }
         return this
     }
@@ -1430,7 +1440,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @see setDisplayHeadersAtStartUp
      */
     fun hideAllHeaders() {
-        mHandler.post {
+        coroutineScope.launch(Dispatchers.Main) {
             multiRange = true
             // Hide linked headers between Scrollable Headers and Footers
             var position = itemCount - mScrollableFooters.size - 1
@@ -1823,7 +1833,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     fun setLoadingMoreAtStartUp(enable: Boolean): FlexibleAdapter<T> {
         Log.d("Set loadingAtStartup=$enable", TAG)
         if (enable) {
-            mHandler.post { onLoadMore(0) }
+            coroutineScope.launch(Dispatchers.Main) { onLoadMore(0) }
         }
         return this
     }
@@ -1927,11 +1937,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         endlessLoading = true
         // Insertion is in post, as suggested by Android because: java.lang.IllegalStateException:
         // Cannot call notifyItemInserted while RecyclerView is computing a layout or scrolling
-        mHandler.post {
+        coroutineScope.launch(Dispatchers.Main) {
             // Show progressItem if not already shown
             showProgressItem()
             Log.d("onLoadMore     invoked!")
-            onEndlessScrollListener?.onLoadMore(this, getMainItemCount(), getEndlessCurrentPage())
+            onEndlessScrollListener?.onLoadMore(this@FlexibleAdapter, getMainItemCount(), getEndlessCurrentPage())
         }
     }
 
@@ -1969,7 +1979,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         // Don't remove progressItem if delay is negative (-1) to keep it visible.
         if (delay > 0 && (newItemsSize == 0)) {
             Log.d("onLoadMore     enqueued removing progressItem ($delay ms)", TAG)
-            mHandler.sendEmptyMessageDelayed(MSG_LOAD_MORE_COMPLETE, delay)
+            coroutineScope.launch(Dispatchers.Main) {
+                delay(delay)
+                hideProgressItem()
+            }
         } else if (delay >= 0) {
             hideProgressItem()
         }
@@ -1995,8 +2008,6 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     private fun showProgressItem() {
         Log.d("onLoadMore     show progressItem", TAG)
 
-        // Clear previous delayed message
-        mHandler.removeMessages(MSG_LOAD_MORE_COMPLETE)
         mProgressItem?.also {
             if (mTopEndless) {
                 addScrollableHeader(it)
@@ -2632,12 +2643,13 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         @IntRange(from = 0) delay: Long,
         scrollToPosition: Boolean
     ) {
-        mHandler.postDelayed({
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
             if (addItem(position, item) && scrollToPosition) autoScrollWithDelay(
                 position,
                 -1
             )
-        }, delay)
+        }
     }
 
     /**
@@ -3057,7 +3069,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         item: T, @IntRange(from = 0) delay: Long,
         permanent: Boolean
     ) {
-        mHandler.postDelayed({ performRemove(item, permanent) }, delay)
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
+            performRemove(item, permanent)
+        }
     }
 
     private fun performRemove(item: T, permanent: Boolean) {
@@ -3706,14 +3721,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun filterItems(unfilteredItems: List<T>, @IntRange(from = 0) delay: Long = 0) {
         //Make longer the timer for new coming deleted items
-        mHandler.removeMessages(MSG_FILTER)
-        if (delay <= 0L) {
-            mHandler.sendMessage(Message.obtain(mHandler, MSG_FILTER, unfilteredItems))
-        } else {
-            mHandler.sendMessageDelayed(
-                Message.obtain(mHandler, MSG_FILTER, unfilteredItems),
-                delay
-            )
+        mFilterJob?.cancel()
+        mFilterJob = coroutineScope.launch(Dispatchers.Main) {
+            if (delay > 0) {
+                delay(delay)
+            }
+            filterAsyncTask(MSG_FILTER, unfilteredItems)
         }
     }
 
@@ -4670,7 +4683,8 @@ open class FlexibleAdapter<T : IFlexible<*>>(
 
     private fun autoScrollWithDelay(position: Int, subItemsCount: Int) {
         // Must be delayed to give time at RecyclerView to recalculate positions after a layout change
-        Handler(Looper.getMainLooper(), Handler.Callback {
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(AUTO_SCROLL_DELAY)
             // #492 - NullPointerException when expanding item with auto-scroll
             val firstVisibleItem =
                 getFlexibleLayoutManager().findFirstCompletelyVisibleItemPosition()
@@ -4694,8 +4708,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             } else if (position < firstVisibleItem) {
                 performScroll(position)
             }
-            true
-        }).sendMessageDelayed(Message.obtain(mHandler), AUTO_SCROLL_DELAY)
+        }
     }
 
     private fun adjustSelected(startPosition: Int, itemCount: Int) {
@@ -4727,7 +4740,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @param delay delay to invalidate the decorations
      */
     fun invalidateItemDecorations(@IntRange(from = 0) delay: Long) {
-        mRecyclerView.postDelayed({ mRecyclerView.invalidateItemDecorations() }, delay)
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(delay)
+            mRecyclerView?.invalidateItemDecorations()
+        }
     }
 
 
@@ -4789,39 +4805,6 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         this.mFilterEntity = StringBuilder(savedInstanceState.getString(EXTRA_FILTER, ""))
     }
 
-
-    /**
-     * Handler callback for delayed actions.
-     *
-     * You can use and override this Callback, current values used by the Adapter:
-     * 1 = async call for updateDataSet.
-     * 2 = async call for filterItems, optionally delayed.
-     * 8 = hide the progress item from the list, optionally delayed.
-     *
-     * **Note:** numbers 0-9 are reserved for the Adapter, use others.
-     *
-     */
-    private inner class HandlerCallback : Handler.Callback {
-        @CallSuper
-        override fun handleMessage(message: Message): Boolean {
-            Log.d("OnHandle message--> ${message.what}", TAG)
-            when (message.what) {
-                MSG_UPDATE, MSG_FILTER -> {
-                    //filterItems
-                    mFilterJob?.cancel()
-                    mFilterJob = filterAsyncTask(message.what, message.obj as? List<T>)
-                    return true
-                }
-
-                MSG_LOAD_MORE_COMPLETE -> {
-                    //hide progress item
-                    hideProgressItem()
-                    return true
-                }
-            }
-            return false
-        }
-    }
 
     private fun filterAsyncTask(what: Int, newItems: List<T>?): Job {
         return coroutineScope.launch(Dispatchers.IO) {
