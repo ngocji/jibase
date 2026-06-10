@@ -55,9 +55,9 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         val EXTRA_LEVEL = TAG + "_selectedLevel"
         val EXTRA_FILTER = TAG + "_filter"
 
-        private const val MSG_UPDATE = 1
-        private const val MSG_FILTER = 2
-        private const val MSG_LOAD_MORE_COMPLETE = 8
+        private const val ACTION_UPDATE = 1
+        private const val ACTION_FILTER = 2
+        private const val ACTION_LOAD_MORE_COMPLETE = 8
         private const val ANIMATE_TO_LIMIT = 1000
         private const val AUTO_SCROLL_DELAY = 150L
 
@@ -70,7 +70,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     private var mTempItems: List<T> = listOf()
     private var mOriginalList: MutableList<T> = mutableListOf()
 
-    /* HashSet, AsyncTask and DiffUtil objects, will increase performance in big list */
+    /* HashSet, Coroutines and DiffUtil objects, will increase performance in big list */
     private var mHashItems: Set<T>? = null
     private var mNotifications: MutableList<Notification>? = null
     private var mFilterJob: Job? = null
@@ -495,7 +495,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         mOriginalList = mutableListOf() // Reset original list from filter
         if (animate) {
             mFilterJob?.cancel()
-            mFilterJob = filterAsyncTask(MSG_UPDATE, items)
+            mFilterJob = filterAsync(ACTION_UPDATE, items)
         } else {
             // Copy of the original list
             val newItems = items.toMutableList()
@@ -1239,14 +1239,14 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun setStickyHeaders(sticky: Boolean, stickyContainer: ViewGroup?): FlexibleAdapter<T> {
         Log.d(
-            "Set stickyHeaders=$sticky (in Post!)${if (stickyContainer != null) " with user defined Sticky Container" else ""}",
+            "Set stickyHeaders=$sticky (using Coroutines)${if (stickyContainer != null) " with user defined Sticky Container" else ""}",
             TAG
         )
 
         // With user defined container
         mStickyContainer = stickyContainer
 
-        // Run in post to be sure about the RecyclerView initialization
+        // Run using Coroutines to be sure about the RecyclerView initialization
         coroutineScope.launch(Dispatchers.Main) {
             // Enable or Disable the sticky headers layout
             if (sticky) {
@@ -1360,8 +1360,8 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             // No notifyItemInserted!
             showAllHeadersWithReset(true)
         } else {
-            Log.d("showAllHeaders with insert notification (in Post!)", TAG)
-            // In post, let's notifyItemInserted!
+            Log.d("showAllHeaders with insert notification (using Coroutines)", TAG)
+            // Using Coroutines, let's notifyItemInserted!
             coroutineScope.launch(Dispatchers.Main) {
                 // #144 - Check if headers are already shown, discard the call to not duplicate headers
                 if (headersShown) {
@@ -1935,7 +1935,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         )
         // Load more if not loading and inside the threshold
         endlessLoading = true
-        // Insertion is in post, as suggested by Android because: java.lang.IllegalStateException:
+        // Insertion is using Coroutines, as suggested by Android because: java.lang.IllegalStateException:
         // Cannot call notifyItemInserted while RecyclerView is computing a layout or scrolling
         coroutineScope.launch(Dispatchers.Main) {
             // Show progressItem if not already shown
@@ -3726,7 +3726,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             if (delay > 0) {
                 delay(delay)
             }
-            filterAsyncTask(MSG_FILTER, unfilteredItems)
+            filterAsync(ACTION_FILTER, unfilteredItems)
         }
     }
 
@@ -4674,7 +4674,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun smoothScrollToPosition(position: Int) {
         // Must be delayed to give time at RecyclerView to recalculate positions after a layout change
-        mRecyclerView.postDelayed({ performScroll(position) }, AUTO_SCROLL_DELAY)
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(AUTO_SCROLL_DELAY)
+            performScroll(position)
+        }
     }
 
     private fun performScroll(position: Int) {
@@ -4732,7 +4735,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
     /**
-     * Helper method to post invalidate the item decorations after the provided delay.
+     * Helper method to invalidate the item decorations after the provided delay using Coroutines.
      *
      * The delay will give time to the LayoutManagers to complete the layout of the child views.
      * **Tip:** A delay of `100ms` should be enough, anyway it can be customized.
@@ -4806,9 +4809,9 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
 
-    private fun filterAsyncTask(what: Int, newItems: List<T>?): Job {
+    private fun filterAsync(action: Int, newItems: List<T>?): Job {
         return coroutineScope.launch(Dispatchers.IO) {
-            Log.d("filterAsyncTask: $what, ${newItems?.size}")
+            Log.d("filterAsync: $action, ${newItems?.size}")
             if (endlessLoading) {
                 Log.d("Cannot filter while endlessLoading", TAG)
                 cancel("Cannot filter while endlessLoading")
@@ -4826,32 +4829,32 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             }
 
             startTimeFilter = System.currentTimeMillis()
-            when (what) {
-                MSG_UPDATE -> {
-                    Log.d("doInBackground - started MSG_UPDATE", TAG)
+            when (action) {
+                ACTION_UPDATE -> {
+                    Log.d("filterAsync - started ACTION_UPDATE", TAG)
                     prepareItemsForUpdate(listDoing)
                     toggleAnimate(listDoing, Payload.CHANGE)
-                    Log.d("doInBackground - ended MSG_UPDATE", TAG)
+                    Log.d("filterAsync - ended ACTION_UPDATE", TAG)
                 }
 
-                MSG_FILTER -> {
-                    Log.d("doInBackground - started MSG_FILTER", TAG)
+                ACTION_FILTER -> {
+                    Log.d("filterAsync - started ACTION_FILTER", TAG)
                     filterItemsAsync(listDoing)
-                    Log.d("doInBackground - ended MSG_FILTER", TAG)
+                    Log.d("filterAsync - ended ACTION_FILTER", TAG)
                 }
             }
 
             withContext(Dispatchers.Main) {
                 if (diffResult != null || mNotifications != null) {
-                    //Execute post data
-                    when (what) {
-                        MSG_UPDATE -> {
+                    // Execute results
+                    when (action) {
+                        ACTION_UPDATE -> {
                             // Notify all the changes
                             executeNotifications(Payload.CHANGE)
                             onPostUpdate()
                         }
 
-                        MSG_FILTER -> {
+                        ACTION_FILTER -> {
                             // Notify all the changes
                             executeNotifications(Payload.FILTER)
                             onPostFilter()
@@ -4907,7 +4910,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
 
     /**
      * This method is called only in case of granular notifications (not when notifyDataSetChanged) and after the
-     * execution of Async Update, it calls the implementation of the [OnUpdateListener] for the emptyView.
+     * execution of Update, it calls the implementation of the [OnUpdateListener] for the emptyView.
      *
      * @see updateDataSet
      */
@@ -4918,7 +4921,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
     /**
-     * This method is called after the execution of Async Filter, it calls the
+     * This method is called after the execution of Filter, it calls the
      * implementation of the [OnFilterListener] for the filterView.
      *
      * @see filterItems
@@ -4976,11 +4979,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 // #320 - To include adapter changes just notified we need a new layout pass:
                 // We must give time to LayoutManager otherwise the findFirstVisibleItemPosition()
                 // will return wrong position!
-                mRecyclerView.postDelayed({
+                coroutineScope.launch(Dispatchers.Main) {
+                    delay(100L)
                     if (areHeadersSticky()) mStickyHeaderHelper?.updateOrClearHeader(
                         true
                     )
-                }, 100L)
+                }
             }
         }
 
