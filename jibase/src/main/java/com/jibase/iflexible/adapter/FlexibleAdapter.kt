@@ -846,6 +846,28 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
     /**
+     * Replaces an existing Scrollable Header at the given position index within the scrollable
+     * headers list (not the global adapter position).
+     *
+     * @param position   the index within [mScrollableHeaders] to replace (0-based)
+     * @param headerItem the new header item to replace with
+     * @return true if replaced successfully, false if position is out of bounds
+     */
+    fun replaceScrollableHeader(@IntRange(from = 0) position: Int, headerItem: T): Boolean {
+        if (position < 0 || position >= mScrollableHeaders.size) {
+            Log.d("Cannot replaceScrollableHeader: position $position out of bounds (size=${mScrollableHeaders.size})", TAG)
+            return false
+        }
+        Log.d("Replace scrollable header at position $position with $headerItem", TAG)
+        headerItem.setSelectable(false)
+        headerItem.setDraggable(false)
+        mScrollableHeaders[position] = headerItem
+        listData[position] = headerItem
+        notifyItemChanged(position)
+        return true
+    }
+
+    /**
      * Adds a Scrollable Footer.
      *
      * **Scrollable Footers** have the following characteristic:
