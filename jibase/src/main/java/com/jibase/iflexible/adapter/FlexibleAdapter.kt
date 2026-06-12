@@ -555,7 +555,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @param position the position of the item in the list
      * @return The **T** object for the position provided or null if item not found
      */
-    fun getItem(position: Int): T? {
+    open fun getItem(position: Int): T? {
         return listData.getOrNull(position)
     }
 

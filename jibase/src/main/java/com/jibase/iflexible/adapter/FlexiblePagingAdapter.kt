@@ -158,6 +158,24 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         listData = (headers + pagingItems + footers + progress).toMutableList()
     }
 
+    /**
+     * Returns the item at [position] and, for positions that map to paging items, also calls
+     * [AsyncPagingDataDiffer.getItem] so Paging 3 is notified of the access and can trigger
+     * prefetching of the next page.
+     *
+     * Without this call, scrolling to the bottom would never trigger load-more because the
+     * differ only schedules a fetch when it sees an item access near the boundary.
+     */
+    override fun getItem(position: Int): T? {
+        val headersSize = getScrollableHeaders().size
+        val pagingItemCount = differ.itemCount
+        val pagingIndex = position - headersSize
+        if (pagingIndex in 0 until pagingItemCount) {
+            differ.getItem(pagingIndex)
+        }
+        return listData.getOrNull(position)
+    }
+
     /* ────────────────────────────────────────────────────── */
     /*  PAGING 3 PUBLIC API                                   */
     /* ────────────────────────────────────────────────────── */
@@ -309,6 +327,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * Neither operation touches [mScrollableFooters].
      */
     private fun startObservingLoadState() {
+        Log.d("Start observing load state - $mPagingProgressItem", TAG)
         loadStateJob?.cancel()
         loadStateJob = pagingScope.launch {
             loadStateFlow.collectLatest { loadState ->
