@@ -33,9 +33,6 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.math.ceil
 import kotlin.math.max
@@ -131,6 +128,15 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     /* Drag&Drop and Swipe helpers */
     private var mItemTouchHelperCallback: ItemTouchHelperCallback? = null
     private var mItemTouchHelper: ItemTouchHelper? = null
+
+    /* Pending configs – applied when RecyclerView attaches */
+    private var pendingItemTouchCallback: ItemTouchHelperCallback? = null
+    private var pendingLongPressDrag: Boolean? = null
+    private var pendingHandleDrag: Boolean? = null
+    private var pendingSwipe: Boolean? = null
+    private var pendingStickyEnabled: Boolean? = null
+    private var pendingStickyContainer: ViewGroup? = null
+    private var pendingEndlessScrollThreshold: Int? = null
 
     /* EndlessScroll */
     private var mEndlessScrollThreshold = 1
@@ -303,6 +309,35 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         Log.d("Attached Adapter to RecyclerView", TAG)
         if (headersShown && areHeadersSticky()) {
             mStickyHeaderHelper?.attachToRecyclerView(mRecyclerView)
+        }
+        applyPendingConfigs()
+    }
+
+    private fun applyPendingConfigs() {
+        pendingItemTouchCallback?.let {
+            setItemTouchHelperCallback(it)
+            pendingItemTouchCallback = null
+        }
+        pendingLongPressDrag?.let {
+            setLongPressDragEnabled(it)
+            pendingLongPressDrag = null
+        }
+        pendingHandleDrag?.let {
+            setHandleDragEnabled(it)
+            pendingHandleDrag = null
+        }
+        pendingSwipe?.let {
+            setSwipeEnabled(it)
+            pendingSwipe = null
+        }
+        pendingStickyEnabled?.let {
+            setStickyHeaders(it, pendingStickyContainer)
+            pendingStickyEnabled = null
+            pendingStickyContainer = null
+        }
+        pendingEndlessScrollThreshold?.let {
+            setEndlessScrollThreshold(it)
+            pendingEndlessScrollThreshold = null
         }
     }
 
@@ -1238,6 +1273,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @see setStickyHeaderElevation
      */
     fun setStickyHeaders(sticky: Boolean, stickyContainer: ViewGroup?): FlexibleAdapter<T> {
+        if (!recyclerViewHasInitialized()) {
+            Log.d("Pending setStickyHeaders=$sticky until RecyclerView attaches", TAG)
+            pendingStickyEnabled = sticky
+            pendingStickyContainer = stickyContainer
+            return this
+        }
         Log.d(
             "Set stickyHeaders=$sticky (using Coroutines)${if (stickyContainer != null) " with user defined Sticky Container" else ""}",
             TAG
@@ -1897,12 +1938,15 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @return this Adapter, so the call can be chained
      */
     fun setEndlessScrollThreshold(@IntRange(from = 1) thresholdItems: Int): FlexibleAdapter<T> {
+        if (!recyclerViewHasInitialized()) {
+            Log.d("Pending setEndlessScrollThreshold=$thresholdItems until RecyclerView attaches", TAG)
+            pendingEndlessScrollThreshold = thresholdItems
+            return this
+        }
         var thresholdItemsResult = thresholdItems
-        if (recyclerViewHasInitialized()) {
-            // Increase visible threshold based on number of columns
-            if (flexibleLayoutManagerHasInitialized()) {
-                thresholdItemsResult *= getFlexibleLayoutManager().getSpanCount()
-            }
+        // Increase visible threshold based on number of columns
+        if (flexibleLayoutManagerHasInitialized()) {
+            thresholdItemsResult *= getFlexibleLayoutManager().getSpanCount()
         }
         mEndlessScrollThreshold = thresholdItemsResult
         Log.d("Set endlessScrollThreshold=$mEndlessScrollThreshold", TAG)
@@ -4221,12 +4265,9 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     /* TOUCH METHODS */
     /*---------------*/
 
-    private fun initializeItemTouchHelper() {
+    private fun initializeItemTouchHelper(): Boolean {
+        if (!recyclerViewHasInitialized()) return false
         if (mItemTouchHelper == null) {
-            if (!recyclerViewHasInitialized()) {
-                throw IllegalStateException("RecyclerView cannot be null. Enabling LongPressDrag or Swipe must be done after the Adapter has been attached to the RecyclerView.")
-            }
-
             if (mItemTouchHelperCallback == null) {
                 mItemTouchHelperCallback = ItemTouchHelperCallback(this)
                 Log.d("Initialized default ItemTouchHelperCallback", TAG)
@@ -4236,6 +4277,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
                 mItemTouchHelper?.attachToRecyclerView(mRecyclerView)
             }
         }
+        return true
     }
 
     /**
@@ -4272,6 +4314,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @return this Adapter, so the call can be chained
      */
     fun setItemTouchHelperCallback(callback: ItemTouchHelperCallback): FlexibleAdapter<T> {
+        if (!recyclerViewHasInitialized()) {
+            Log.d("Pending setItemTouchHelperCallback until RecyclerView attaches", TAG)
+            pendingItemTouchCallback = callback
+            return this
+        }
         mItemTouchHelperCallback = callback
         mItemTouchHelper = null
         initializeItemTouchHelper()
@@ -4308,7 +4355,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @return this Adapter, so the call can be chained
      */
     fun setLongPressDragEnabled(longPressDragEnabled: Boolean): FlexibleAdapter<T> {
-        initializeItemTouchHelper()
+        if (!initializeItemTouchHelper()) {
+            Log.d("Pending setLongPressDragEnabled=$longPressDragEnabled until RecyclerView attaches", TAG)
+            pendingLongPressDrag = longPressDragEnabled
+            return this
+        }
         Log.d("Set longPressDragEnabled=$longPressDragEnabled", TAG)
         mItemTouchHelperCallback?.longPressDragEnabled = longPressDragEnabled
         return this
@@ -4339,7 +4390,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @return this Adapter, so the call can be chained
      */
     fun setHandleDragEnabled(handleDragEnabled: Boolean): FlexibleAdapter<T> {
-        initializeItemTouchHelper()
+        if (!initializeItemTouchHelper()) {
+            Log.d("Pending setHandleDragEnabled=$handleDragEnabled until RecyclerView attaches", TAG)
+            pendingHandleDrag = handleDragEnabled
+            return this
+        }
         Log.d("Set handleDragEnabled=$handleDragEnabled", TAG)
         this.mItemTouchHelperCallback?.handleDragEnabled = handleDragEnabled
         return this
@@ -4371,8 +4426,12 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @return this Adapter, so the call can be chained
      */
     fun setSwipeEnabled(swipeEnabled: Boolean): FlexibleAdapter<T> {
+        if (!initializeItemTouchHelper()) {
+            Log.d("Pending setSwipeEnabled=$swipeEnabled until RecyclerView attaches", TAG)
+            pendingSwipe = swipeEnabled
+            return this
+        }
         Log.d("Set swipeEnabled=$swipeEnabled", TAG)
-        initializeItemTouchHelper()
         mItemTouchHelperCallback?.swipeEnabled = swipeEnabled
         return this
     }
