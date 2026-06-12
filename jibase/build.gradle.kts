@@ -45,6 +45,7 @@ dependencies {
     kapt(libs.bundles.hilt.compiler)
     implementation(libs.bundles.common)
     kapt(libs.bundles.common.compiler)
+    implementation(libs.androidx.paging.runtime)
 }
 
 publishing {

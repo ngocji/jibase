@@ -23,21 +23,26 @@
    - [Sticky Header](#sticky-header)
    - [Undo – Hoàn tác](#undo--hoàn-tác)
    - [Fast Scroller](#fast-scroller)
-5. [ViewHolder](#viewholder)
-6. [Helpers](#helpers)
+5. [FlexiblePagingAdapter – Paging 3](#flexiblepagingadapter--paging-3)
+   - [Cơ chế hoạt động](#cơ-chế-hoạt-động)
+   - [API](#api)
+   - [Tính năng giữ lại & xung đột](#tính-năng-giữ-lại--xung-đột)
+6. [ViewHolder](#viewholder)
+7. [Helpers](#helpers)
    - [ActionModeHelper](#actionmodehelper)
    - [UndoHelper](#undohelper)
-7. [Listeners](#listeners)
-8. [Ví dụ sử dụng thực tế](#ví-dụ-sử-dụng-thực-tế)
+8. [Listeners](#listeners)
+9. [Ví dụ sử dụng thực tế](#ví-dụ-sử-dụng-thực-tế)
 
 ---
 
 ## Tổng quan kiến trúc
 
 ```
-AbstractFlexibleAdapter          ← Quản lý selection, FastScroller, bound ViewHolders
+AbstractFlexibleAdapter              ← Quản lý selection, FastScroller, bound ViewHolders
     └── AbstractFlexibleAnimatorAdapter  ← Quản lý animation khi scroll
             └── FlexibleAdapter<T>       ← Toàn bộ logic chính
+                    └── FlexiblePagingAdapter<T>  ← FlexibleAdapter + Paging 3
 
 IFlexible<VH>                   ← Interface mỗi item phải implement
     └── AbstractFlexibleItem<VH>  ← Base class cho item thông thường
@@ -906,6 +911,120 @@ override fun getBubbleText(position: Int): String = firstLetter
 
 ---
 
+## FlexiblePagingAdapter – Paging 3
+
+**Package:** `com.jibase.iflexible.adapter.FlexiblePagingAdapter`
+
+**Khai báo:**
+```kotlin
+open class FlexiblePagingAdapter<T : IFlexible<*>>(
+    diffCallback: DiffUtil.ItemCallback<T>,
+    hasStateId: Boolean = false
+) : FlexibleAdapter<T>(mutableListOf(), hasStateId)
+```
+
+### Cơ chế hoạt động
+
+`FlexiblePagingAdapter` kế thừa trực tiếp từ `FlexibleAdapter`, giữ nguyên toàn bộ tính năng đã cài đặt. Paging 3 được tích hợp thông qua `AsyncPagingDataDiffer`:
+
+```
+submitData(PagingData<T>)
+    └── AsyncPagingDataDiffer          ← quản lý ordering & diffing của paging items
+            └── ListUpdateCallback     ← syncListData() trước mỗi notifyItem*
+                    └── listData       ← headers + paging snapshot + footers
+                            └── notifyItem* offset theo headers.size
+```
+
+**Nguyên tắc:**
+- `listData` = scrollable headers + paging items + scrollable footers → `getItemCount()` trả về `listData.size`
+- `syncListData()` rebuild `listData` từ `mScrollableHeaders + differ.snapshot().items + mScrollableFooters` **trước** mỗi lần notify, đảm bảo headers/footers không bị mất sau mỗi page load
+- Positions từ differ (relative to paging items) được offset thêm `scrollableHeaders.size` trước khi notify RecyclerView
+- `enablePlaceholders = false` trong `PagingConfig` được khuyến nghị để tránh null trong `listData`
+
+---
+
+### API
+
+#### Paging 3
+
+| Method | Mô tả |
+|--------|-------|
+| `submitData(pagingData: PagingData<T>)` | Suspend – submit data mới, dùng trong coroutine |
+| `submitData(lifecycle, pagingData)` | Non-suspend – tự cancel khi lifecycle destroy |
+| `loadStateFlow: Flow<CombinedLoadStates>` | Observe trạng thái load (refresh / prepend / append) |
+| `addLoadStateListener(listener)` | Đăng ký listener trạng thái |
+| `removeLoadStateListener(listener)` | Hủy listener |
+| `retry()` | Retry lần load cuối bị lỗi |
+| `refresh()` | Invalidate PagingData và load lại từ đầu |
+
+#### Progress Item (bottom loading indicator)
+
+#### `setEndlessProgressItem(progressItem: T?): FlexiblePagingAdapter<T>`
+Đặt item hiển thị ở cuối list khi Paging 3 đang load thêm trang mới.
+
+- Tự động được thêm vào `ScrollableFooter` khi `loadState.append is LoadState.Loading`
+- Tự động bị xóa khi load xong hoặc lỗi
+- Có thể gọi trước hoặc sau khi attach RecyclerView
+- Observation tự start khi RV attach, tự cancel khi RV detach
+- Pass `null` để tắt
+
+```kotlin
+adapter.setEndlessProgressItem(ProgressItem())
+```
+
+#### "No more data" footer
+
+Không có API riêng — tự quản lý bằng `addScrollableFooter` / `removeScrollableFooter` trong `addLoadStateListener`:
+
+```kotlin
+adapter.addLoadStateListener { states ->
+    val append = states.append
+    if (append is LoadState.NotLoading && append.endOfPaginationReached) {
+        adapter.addScrollableFooter(noMoreDataItem)
+    } else {
+        adapter.removeScrollableFooter(noMoreDataItem)
+    }
+}
+```
+
+#### Disabled (no-op)
+
+Các method sau bị override thành no-op vì Paging 3 đảm nhận:
+
+| Method | Lý do |
+|--------|-------|
+| `onLoadMore(position)` | Paging 3 tự trigger load khi gần cuối |
+| `onLoadMoreComplete(newItems, delay)` | Paging 3 tự insert item mới qua differ |
+| `setTopEndless(topEndless)` | Top endless không hỗ trợ trong paging mode |
+
+---
+
+### Tính năng giữ lại & xung đột
+
+**Giữ nguyên hoàn toàn:**
+
+| Tính năng | Ghi chú |
+|-----------|---------|
+| Expandable | State lưu trong item object, không phụ thuộc vị trí |
+| Sticky / Scrollable Headers & Footers | `listData` được rebuild kèm headers/footers sau mỗi page load — không bị mất |
+| Selection, ActionMode | Hoạt động bình thường; reset khi Paging 3 `refresh()` |
+| Animation (scroll) | Không phụ thuộc `listData` |
+| Click / LongClick listeners | Không phụ thuộc `listData` |
+| Drag & Drop (UI) | Swap hoạt động, nhưng xem lưu ý bên dưới |
+| Section Headers (nếu là phần của paged data) | Sync cùng với items |
+| Pending Init | Tất cả pending config vẫn apply khi RV attach |
+
+**Xung đột về nghĩa (không nên dùng):**
+
+| Tính năng | Vấn đề |
+|-----------|--------|
+| `filterItems()` – client-side | `syncListData()` ghi đè `listData` mỗi khi Paging 3 load → filter bị reset. **Dùng server-side filter qua query param trong PagingSource** |
+| `setEndlessScrollListener()` | Duplicate với Paging 3's loading, không nên dùng cả hai |
+| Drag & Drop reorder vĩnh viễn | Thứ tự bị reset sau `refresh()`. Phù hợp nếu chỉ reorder tạm thời trong session |
+| `removeItem()` + Undo | Item bị xóa local sẽ quay lại sau `refresh()`. Cần `RemoteMediator` để đồng bộ server |
+
+---
+
 ## ViewHolder
 
 ### `FlexibleViewHolder` – `viewholder/FlexibleViewHolder.kt`
@@ -1289,4 +1408,105 @@ class SectionItem(val id: Int, val name: String, header: SectionHeader) :
 val adapter = FlexibleAdapter(items)
     .setDisplayHeadersAtStartUp(true)
     .setStickyHeaders(true)
+```
+
+### 7. FlexiblePagingAdapter với Paging 3
+
+```kotlin
+// DiffCallback
+class MyItemDiffCallback : DiffUtil.ItemCallback<MyItem>() {
+    override fun areItemsTheSame(old: MyItem, new: MyItem) = old.id == new.id
+    override fun areContentsTheSame(old: MyItem, new: MyItem) = old == new
+}
+
+// PagingSource
+class MyPagingSource(private val api: Api) : PagingSource<Int, MyItem>() {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MyItem> {
+        val page = params.key ?: 1
+        return try {
+            val response = api.getItems(page = page, size = params.loadSize)
+            LoadResult.Page(
+                data = response.items.map { MyItem(it) },
+                prevKey = null,
+                nextKey = if (response.items.size < params.loadSize) null else page + 1
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
+        }
+    }
+    override fun getRefreshKey(state: PagingState<Int, MyItem>) = null
+}
+
+// ProgressItem – hiển thị loading indicator ở cuối list
+class ProgressItem : AbstractFlexibleItem<ProgressViewHolder>() {
+    override fun createViewHolder(parent: ViewGroup, adapter: FlexibleAdapter<*>) =
+        ProgressViewHolder(ItemProgressBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+    override fun bindViewHolder(adapter: FlexibleAdapter<*>, holder: RecyclerView.ViewHolder, position: Int, payloads: List<*>) {
+        // Hiện spinner bình thường – Paging 3 tự ẩn khi load xong
+    }
+
+    override fun equals(other: Any?) = other is ProgressItem
+    override fun hashCode() = javaClass.hashCode()
+}
+
+// ViewModel
+class MyViewModel(private val api: Api) : ViewModel() {
+    val pagingFlow = Pager(
+        config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+        pagingSourceFactory = { MyPagingSource(api) }
+    ).flow.cachedIn(viewModelScope)
+}
+
+// Fragment
+class MyFragment : Fragment(), OnItemClickListener {
+
+    private val viewModel: MyViewModel by viewModels()
+    private lateinit var adapter: FlexiblePagingAdapter<MyItem>
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val noMoreDataItem = NoMoreDataItem()
+
+        adapter = FlexiblePagingAdapter(MyItemDiffCallback())
+            .setEndlessProgressItem(ProgressItem())  // hiện khi đang load trang tiếp
+            .addListener(this)                       // click, longclick…
+            .setDisplayHeadersAtStartUp(true)
+            .setStickyHeaders(true)                  // sticky header vẫn hoạt động
+
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(context)
+
+        // Submit paging data
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.pagingFlow.collectLatest { adapter.submitData(it) }
+        }
+
+        // Xử lý loading states (SwipeRefreshLayout, error view, no-more-data footer…)
+        adapter.addLoadStateListener { loadState ->
+            swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh is LoadState.Error) {
+                showError((loadState.refresh as LoadState.Error).error)
+            }
+            // Footer "hết data" – chỉ hiện khi đã load hết toàn bộ trang
+            val append = loadState.append
+            if (append is LoadState.NotLoading && append.endOfPaginationReached) {
+                adapter.addScrollableFooter(noMoreDataItem)
+            } else {
+                adapter.removeScrollableFooter(noMoreDataItem)
+            }
+        }
+
+        // Pull-to-refresh
+        swipeRefresh.setOnRefreshListener { adapter.refresh() }
+
+        // Retry khi lỗi append
+        btnRetry.setOnClickListener { adapter.retry() }
+    }
+
+    override fun onItemClick(adapter: FlexibleAdapter<*>, view: View, position: Int): Boolean {
+        val item = (adapter as FlexiblePagingAdapter<MyItem>).getItem(position)
+        // xử lý click
+        return false
+    }
+}
 ```

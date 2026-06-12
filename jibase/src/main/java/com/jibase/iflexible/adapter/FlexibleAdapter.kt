@@ -1893,7 +1893,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      * @see isEndlessScrollEnabled
      * @see setEndlessScrollListener
      */
-    fun setEndlessProgressItem(progressItem: T?): FlexibleAdapter<T> {
+    open fun setEndlessProgressItem(progressItem: T?): FlexibleAdapter<T> {
         endlessScrollEnabled = progressItem != null
 
         if (progressItem != null) {

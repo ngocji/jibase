@@ -13,6 +13,7 @@ androidXExifinterface = "1.4.1"
 androidXCamera = "1.4.2"
 androidXMedia3 = "1.8.0"
 androidXRoom = "2.7.2"
+androidXPaging = "3.3.6"
 androidXWorkManager = "2.10.3"
 androidxAppcompat = "1.7.1"
 androidxNavigation = "2.9.3"
@@ -81,6 +82,7 @@ androidx-room = { module = "androidx.room:room-ktx", version.ref = "androidXRoom
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "androidXRoom" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "androidXRoom" }
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "androidXRoom" }
+androidx-paging-runtime = { module = "androidx.paging:paging-runtime-ktx", version.ref = "androidXPaging" }
 
 
 #Common
