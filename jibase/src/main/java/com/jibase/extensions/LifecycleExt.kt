@@ -6,8 +6,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.jibase.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.toList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -104,6 +106,7 @@ fun <T> Fragment.collect(channel: Channel<T>, action: suspend (value: T) -> Unit
 fun <T> FragmentActivity.collect(channel: Channel<T>, action: suspend (value: T) -> Unit) {
     collectAtLifecycle<T> {
         for (value in channel) {
+            Log.d("Channel - $value")
             action.invoke(value)
         }
     }

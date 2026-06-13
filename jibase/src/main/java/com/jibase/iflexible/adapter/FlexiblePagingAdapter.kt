@@ -156,6 +156,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         val pagingItems = differ.snapshot().items
         val progress = if (isProgressVisible) listOfNotNull(mPagingProgressItem) else emptyList()
         listData = (headers + pagingItems + footers + progress).toMutableList()
+        onPostUpdate()
     }
 
     /**

@@ -25,9 +25,11 @@ object FragmentUtils {
             .beginTransaction()
 
         val tagName = option.fragment.getTagName()
+        Log.d("FragmentUtils: $option")
 
         if (option.popWhenExists && getFragmentByTag(option.target, tagName) != null) {
             popBackTo(option.target, tagName)
+            Log.d("FragmentUtils: exist fragment -> pop back to $tagName")
             return
         }
 
@@ -144,6 +146,10 @@ object FragmentUtils {
         var popExit: Int = R.anim.idle
         var commitNow: Boolean = false
         var popWhenExists: Boolean = false
+
+        override fun toString(): String {
+            return "ReplaceOption(target=$target, fragment=$fragment - tag: ${fragment.getTagName()},containerId=$containerId, addToBackStack=$addToBackStack, enter=$enter, exit=$exit, popEnter=$popEnter, popExit=$popExit, commitNow=$commitNow, popWhenExists=$popWhenExists)"
+        }
 
         companion object {
             fun <T : Any> with(target: T): ReplaceOption<T> {
