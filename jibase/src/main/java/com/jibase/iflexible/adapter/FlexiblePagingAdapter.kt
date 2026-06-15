@@ -180,6 +180,11 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
     /*  PAGING 3 PUBLIC API                                   */
     /* ────────────────────────────────────────────────────── */
 
+    private var _isPagingDataSubmitted = false
+
+    /** `true` once [submitData] has been called at least once. */
+    val isPagingDataSubmitted: Boolean get() = _isPagingDataSubmitted
+
     /**
      * Submits a new [PagingData] to be diffed and displayed.
      *
@@ -195,6 +200,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * ```
      */
     suspend fun submitData(pagingData: PagingData<T>) {
+        _isPagingDataSubmitted = true
         differ.submitData(pagingData)
     }
 
@@ -209,6 +215,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * ```
      */
     fun submitData(lifecycle: Lifecycle, pagingData: PagingData<T>) {
+        _isPagingDataSubmitted = true
         differ.submitData(lifecycle, pagingData)
     }
 

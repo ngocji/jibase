@@ -846,6 +846,31 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     }
 
     /**
+     * Adds a list of Scrollable Headers in bulk.
+     *
+     * Items already present in the adapter are skipped. The new headers are inserted at position 0
+     * (before any existing headers) in the order they appear in the provided list.
+     *
+     * @param headerItems the list of header items to add
+     * @return the number of headers actually added (duplicates excluded)
+     * @see addScrollableHeader
+     */
+    fun addScrollableHeaders(headerItems: List<T>): Int {
+        val newItems = headerItems.filter { !mScrollableHeaders.contains(it) }
+        if (newItems.isEmpty()) return 0
+        Log.d("Add ${newItems.size} scrollable headers", TAG)
+        newItems.forEach {
+            it.setSelectable(false)
+            it.setDraggable(false)
+        }
+        mScrollableHeaders.addAll(0, newItems)
+        setScrollAnimate(true)
+        performInsert(0, newItems, true)
+        setScrollAnimate(false)
+        return newItems.size
+    }
+
+    /**
      * Replaces an existing Scrollable Header at the given position index within the scrollable
      * headers list (not the global adapter position).
      *
@@ -865,6 +890,43 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         listData[position] = headerItem
         notifyItemChanged(position)
         return true
+    }
+
+    /**
+     * Replaces the entire Scrollable Headers list with a new list.
+     *
+     * Handles size differences:
+     *  * If new size == old size: updates in-place, notifies changed range.
+     *  * If new size > old size: updates existing, then inserts extras.
+     *  * If new size < old size: updates existing, then removes extras.
+     *
+     * @param headerItems the new list of header items to replace with
+     */
+    fun replaceScrollableHeaders(headerItems: List<T>) {
+        Log.d("Replace all scrollable headers with ${headerItems.size} items", TAG)
+        val oldSize = mScrollableHeaders.size
+        val newSize = headerItems.size
+        headerItems.forEach {
+            it.setSelectable(false)
+            it.setDraggable(false)
+        }
+        val changedCount = minOf(oldSize, newSize)
+        for (i in 0 until changedCount) {
+            mScrollableHeaders[i] = headerItems[i]
+            listData[i] = headerItems[i]
+        }
+        if (changedCount > 0) notifyItemRangeChanged(0, changedCount)
+        if (newSize > oldSize) {
+            val extras = headerItems.subList(oldSize, newSize)
+            mScrollableHeaders.addAll(extras)
+            listData.addAll(oldSize, extras)
+            notifyItemRangeInserted(oldSize, extras.size)
+        } else if (newSize < oldSize) {
+            val removeCount = oldSize - newSize
+            repeat(removeCount) { mScrollableHeaders.removeAt(newSize) }
+            repeat(removeCount) { listData.removeAt(newSize) }
+            notifyItemRangeRemoved(newSize, removeCount)
+        }
     }
 
     /**
