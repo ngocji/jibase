@@ -1,6 +1,6 @@
 package com.jibase.iflexible.adapter
 
-import android.os.*
+import android.os.Bundle
 import android.view.ViewGroup
 import androidx.annotation.CallSuper
 import androidx.annotation.IntRange
@@ -8,7 +8,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar.Callback.DISMISS_EVENT_MANUAL
-import com.jibase.extensions.*
+import com.jibase.extensions.hasPosition
+import com.jibase.extensions.invisible
+import com.jibase.extensions.visible
+import com.jibase.iflexible.adapter.FlexibleAdapter.Companion.ANIMATE_TO_LIMIT
 import com.jibase.iflexible.entities.Notification
 import com.jibase.iflexible.entities.Notification.Companion.ADD
 import com.jibase.iflexible.entities.Notification.Companion.CHANGE
@@ -19,8 +22,20 @@ import com.jibase.iflexible.entities.Payload
 import com.jibase.iflexible.helpers.FlexibleDiffCallback
 import com.jibase.iflexible.helpers.ItemTouchHelperCallback
 import com.jibase.iflexible.helpers.StickyHeaderHelper
-import com.jibase.iflexible.items.interfaceItems.*
-import com.jibase.iflexible.listener.*
+import com.jibase.iflexible.items.interfaceItems.IExpandable
+import com.jibase.iflexible.items.interfaceItems.IFilterable
+import com.jibase.iflexible.items.interfaceItems.IFlexible
+import com.jibase.iflexible.items.interfaceItems.IHeader
+import com.jibase.iflexible.items.interfaceItems.ISectionable
+import com.jibase.iflexible.listener.EndlessScrollListener
+import com.jibase.iflexible.listener.OnDeleteCompleteListener
+import com.jibase.iflexible.listener.OnFilterListener
+import com.jibase.iflexible.listener.OnItemClickListener
+import com.jibase.iflexible.listener.OnItemLongClickListener
+import com.jibase.iflexible.listener.OnItemMoveListener
+import com.jibase.iflexible.listener.OnItemSwipeListener
+import com.jibase.iflexible.listener.OnStickyHeaderChangeListener
+import com.jibase.iflexible.listener.OnUpdateListener
 import com.jibase.iflexible.viewholder.FlexibleExpandableViewHolder
 import com.jibase.iflexible.viewholder.FlexibleViewHolder
 import com.jibase.utils.Log
@@ -33,7 +48,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.*
+import java.util.Collections
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -134,6 +149,7 @@ open class FlexibleAdapter<T : IFlexible<*>>(
     private var pendingLongPressDrag: Boolean? = null
     private var pendingHandleDrag: Boolean? = null
     private var pendingSwipe: Boolean? = null
+    private var pendingSwipeFlags: Int? = null
     private var pendingStickyEnabled: Boolean? = null
     private var pendingStickyContainer: ViewGroup? = null
     private var pendingEndlessScrollThreshold: Int? = null
@@ -217,7 +233,6 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             is OnUpdateListener -> {
                 Log.d("- OnUpdateListener", TAG)
                 onUpdateListener = listener
-                listener.onUpdateEmptyView(this, getMainItemCount())
             }
 
             is OnFilterListener -> {
@@ -329,6 +344,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         pendingSwipe?.let {
             setSwipeEnabled(it)
             pendingSwipe = null
+        }
+        pendingSwipeFlags?.let {
+            setSwipeFlags(it)
+            pendingSwipeFlags = null
         }
         pendingStickyEnabled?.let {
             setStickyHeaders(it, pendingStickyContainer)
@@ -880,7 +899,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun replaceScrollableHeader(@IntRange(from = 0) position: Int, headerItem: T): Boolean {
         if (position < 0 || position >= mScrollableHeaders.size) {
-            Log.d("Cannot replaceScrollableHeader: position $position out of bounds (size=${mScrollableHeaders.size})", TAG)
+            Log.d(
+                "Cannot replaceScrollableHeader: position $position out of bounds (size=${mScrollableHeaders.size})",
+                TAG
+            )
             return false
         }
         Log.d("Replace scrollable header at position $position with $headerItem", TAG)
@@ -2023,7 +2045,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun setEndlessScrollThreshold(@IntRange(from = 1) thresholdItems: Int): FlexibleAdapter<T> {
         if (!recyclerViewHasInitialized()) {
-            Log.d("Pending setEndlessScrollThreshold=$thresholdItems until RecyclerView attaches", TAG)
+            Log.d(
+                "Pending setEndlessScrollThreshold=$thresholdItems until RecyclerView attaches",
+                TAG
+            )
             pendingEndlessScrollThreshold = thresholdItems
             return this
         }
@@ -2069,7 +2094,11 @@ open class FlexibleAdapter<T : IFlexible<*>>(
             // Show progressItem if not already shown
             showProgressItem()
             Log.d("onLoadMore     invoked!")
-            onEndlessScrollListener?.onLoadMore(this@FlexibleAdapter, getMainItemCount(), getEndlessCurrentPage())
+            onEndlessScrollListener?.onLoadMore(
+                this@FlexibleAdapter,
+                getMainItemCount(),
+                getEndlessCurrentPage()
+            )
         }
     }
 
@@ -4440,7 +4469,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun setLongPressDragEnabled(longPressDragEnabled: Boolean): FlexibleAdapter<T> {
         if (!initializeItemTouchHelper()) {
-            Log.d("Pending setLongPressDragEnabled=$longPressDragEnabled until RecyclerView attaches", TAG)
+            Log.d(
+                "Pending setLongPressDragEnabled=$longPressDragEnabled until RecyclerView attaches",
+                TAG
+            )
             pendingLongPressDrag = longPressDragEnabled
             return this
         }
@@ -4475,7 +4507,10 @@ open class FlexibleAdapter<T : IFlexible<*>>(
      */
     fun setHandleDragEnabled(handleDragEnabled: Boolean): FlexibleAdapter<T> {
         if (!initializeItemTouchHelper()) {
-            Log.d("Pending setHandleDragEnabled=$handleDragEnabled until RecyclerView attaches", TAG)
+            Log.d(
+                "Pending setHandleDragEnabled=$handleDragEnabled until RecyclerView attaches",
+                TAG
+            )
             pendingHandleDrag = handleDragEnabled
             return this
         }
@@ -4520,6 +4555,31 @@ open class FlexibleAdapter<T : IFlexible<*>>(
         return this
     }
 
+    /**
+     * Sets custom swipe flags to control the swipe direction of items.
+     *
+     * These flags override the default swipe directions. Use constants from
+     * [androidx.recyclerview.widget.ItemTouchHelper], for example:
+     * `ItemTouchHelper.LEFT`, `ItemTouchHelper.RIGHT`.
+     *
+     * **Note:** Requires the Adapter being attached to the RecyclerView.
+     * If not attached yet, the value will be stored and applied once the
+     * RecyclerView is initialized.
+     *
+     * @param flags the swipe directions (e.g., `ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT`)
+     * @return this Adapter, so the call can be chained
+     * @see setSwipeEnabled
+     */
+    fun setSwipeFlags(flags: Int): FlexibleAdapter<T> {
+        if (!initializeItemTouchHelper()) {
+            Log.d("Pending setSwipeFlags=$flags until RecyclerView attaches", TAG)
+            pendingSwipeFlags = flags
+            return this
+        }
+        Log.d("Set swipeFlags=$flags", TAG)
+        mItemTouchHelperCallback?.swipeFlags = flags
+        return this
+    }
 
     /**
      * Moves the item placed at position `fromPosition` to the position

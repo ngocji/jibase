@@ -2,13 +2,18 @@ package com.jibase.iflexible.helpers
 
 import android.graphics.Canvas
 import android.view.View
-import androidx.recyclerview.widget.*
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.Adapter
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.jibase.extensions.gone
 import com.jibase.extensions.visible
 import com.jibase.iflexible.utils.LayoutUtils
 
-open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemTouchHelper.Callback() {
+open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) :
+    ItemTouchHelper.Callback() {
     var longPressDragEnabled = false
     var handleDragEnabled = false
     var swipeEnabled = false
@@ -29,20 +34,26 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
         return swipeEnabled;
     }
 
-    override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+    override fun getMovementFlags(
+        recyclerView: RecyclerView,
+        viewHolder: RecyclerView.ViewHolder
+    ): Int {
         val layoutManager = recyclerView.layoutManager
         var dragFlags: Int
         var swipeFlags: Int
         // Set movement flags based on the Layout Manager and Orientation
         if (layoutManager is GridLayoutManager || layoutManager is StaggeredGridLayoutManager) {
-            dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            dragFlags =
+                ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
             swipeFlags = 0
         } else if (LayoutUtils.getOrientation(recyclerView) == LinearLayoutManager.HORIZONTAL) {
             dragFlags = ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
-            swipeFlags = if (this.swipeFlags > 0) this.swipeFlags else ItemTouchHelper.UP or ItemTouchHelper.DOWN
+            swipeFlags =
+                if (this.swipeFlags > 0) this.swipeFlags else ItemTouchHelper.UP or ItemTouchHelper.DOWN
         } else {
             dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
-            swipeFlags = if (this.swipeFlags > 0) this.swipeFlags else ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            swipeFlags =
+                if (this.swipeFlags > 0) this.swipeFlags else ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         }
         // Disallow item swiping or dragging
         if (viewHolder is ViewHolderCallback) {
@@ -53,12 +64,23 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
         return makeMovementFlags(dragFlags, swipeFlags)
     }
 
-    override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-        if (!adapterCallBack.shouldMove(viewHolder.adapterPosition, target.adapterPosition)) {
+    override fun onMove(
+        recyclerView: RecyclerView,
+        viewHolder: RecyclerView.ViewHolder,
+        target: RecyclerView.ViewHolder
+    ): Boolean {
+        if (!adapterCallBack.shouldMove(
+                viewHolder.absoluteAdapterPosition,
+                target.absoluteAdapterPosition
+            )
+        ) {
             return false
         }
         // Notify the adapter of the move
-        adapterCallBack.onItemMove(viewHolder.adapterPosition, target.adapterPosition)
+        adapterCallBack.onItemMove(
+            viewHolder.absoluteAdapterPosition,
+            target.absoluteAdapterPosition
+        )
         return true
     }
 
@@ -66,15 +88,27 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
         if (viewHolder is ViewHolderCallback) {
             val viewHolderCallback = viewHolder as ViewHolderCallback
             if (viewHolderCallback.getFrontView().translationX != 0f)
-                adapterCallBack.onItemSwiped(viewHolder.adapterPosition, direction)
+                adapterCallBack.onItemSwiped(
+                    viewHolder.absoluteAdapterPosition,
+                    direction
+                )
         }
     }
 
-    override fun canDropOver(recyclerView: RecyclerView, current: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+    override fun canDropOver(
+        recyclerView: RecyclerView,
+        current: RecyclerView.ViewHolder,
+        target: RecyclerView.ViewHolder
+    ): Boolean {
         return true
     }
 
-    override fun getAnimationDuration(recyclerView: RecyclerView, animationType: Int, animateDx: Float, animateDy: Float): Long {
+    override fun getAnimationDuration(
+        recyclerView: RecyclerView,
+        animationType: Int,
+        animateDx: Float,
+        animateDy: Float
+    ): Long {
         return if (animationType == ItemTouchHelper.ANIMATION_TYPE_DRAG) DRAG_DURATION else SWIPE_DURATION
     }
 
@@ -85,9 +119,13 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
             if (viewHolder is ViewHolderCallback) {
                 // Let the ViewHolder to know that this item is swiping or dragging
                 val viewHolderCallback = viewHolder as ViewHolderCallback
-                viewHolderCallback.onActionStateChanged(viewHolder.adapterPosition, actionState)
+                viewHolderCallback.onActionStateChanged(
+                    viewHolder.absoluteAdapterPosition,
+                    actionState
+                )
                 if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-                    ItemTouchHelper.Callback.getDefaultUIUtil().onSelected(viewHolderCallback.getFrontView())
+                    ItemTouchHelper.Callback.getDefaultUIUtil()
+                        .onSelected(viewHolderCallback.getFrontView())
                 }
             }
         } else {
@@ -103,11 +141,19 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
             getDefaultUIUtil().clearView(viewHolderCallback.getFrontView())
             // Hide Left or Right View
             setLayoutVisibility(viewHolderCallback, 0)
-            viewHolderCallback.onItemReleased(viewHolder.adapterPosition)
+            viewHolderCallback.onItemReleased(viewHolder.absoluteAdapterPosition)
         }
     }
 
-    override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
+    override fun onChildDraw(
+        c: Canvas,
+        recyclerView: RecyclerView,
+        viewHolder: RecyclerView.ViewHolder,
+        dX: Float,
+        dY: Float,
+        actionState: Int,
+        isCurrentlyActive: Boolean
+    ) {
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && viewHolder is ViewHolderCallback) {
 
             // Update visibility for RearViews - Convert to custom VH
@@ -128,7 +174,15 @@ open class ItemTouchHelperCallback(val adapterCallBack: AdapterCallback) : ItemT
 
             setLayoutVisibility(viewHolderCallback, swipingDirection)
             // Translate the FrontView
-            getDefaultUIUtil().onDraw(c, recyclerView, frontView, dX, dY, actionState, isCurrentlyActive)
+            getDefaultUIUtil().onDraw(
+                c,
+                recyclerView,
+                frontView,
+                dX,
+                dY,
+                actionState,
+                isCurrentlyActive
+            )
 
         } else {
             super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
