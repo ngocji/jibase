@@ -164,8 +164,9 @@ class StickyHeaderHelper<T : IFlexible<*>>(
     }
 
     private fun hasStickyHeaderTranslated(position: Int): Boolean {
-        val vh = mRecyclerView.findViewHolderForAdapterPosition(position)
-        return vh != null && (vh.itemView.x < 0 || vh.itemView.y < 0)
+        val vh = mRecyclerView.findViewHolderForAdapterPosition(position) ?: return false
+        return vh.itemView.x < mRecyclerView.paddingLeft ||
+               vh.itemView.y + vh.itemView.paddingTop < mRecyclerView.paddingTop
     }
 
     private fun onStickyHeaderChange(newPosition: Int, oldPosition: Int) {
@@ -302,11 +303,11 @@ class StickyHeaderHelper<T : IFlexible<*>>(
                 height = view.measuredHeight
                 // Margins from current offset
                 if (leftMargin == 0)
-                    leftMargin = manager.getLeftDecorationWidth(itemView)
+                    leftMargin = manager.getLeftDecorationWidth(itemView) + mRecyclerView.paddingLeft
                 if (topMargin == 0)
-                    topMargin = manager.getTopDecorationHeight(itemView)
+                    topMargin = manager.getTopDecorationHeight(itemView) + mRecyclerView.paddingTop
                 if (rightMargin == 0)
-                    rightMargin = manager.getRightDecorationWidth(itemView)
+                    rightMargin = manager.getRightDecorationWidth(itemView) + mRecyclerView.paddingRight
                 if (bottomMargin == 0)
                     bottomMargin = manager.getBottomDecorationHeight(itemView)
             }
