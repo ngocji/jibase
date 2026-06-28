@@ -3,7 +3,7 @@
 ## Tài liệu đầy đủ
 
 - **API Reference toàn bộ:** → [`jibase.md`](jibase.md) — tất cả hàm, signature, ví dụ chi tiết
-- **FlexibleAdapter (RecyclerView):** → [`FLEXIBLE_ADAPTER_GUIDE.md`](FLEXIBLE_ADAPTER_GUIDE.md)
+- **FlexibleAdapter (RecyclerView):** → [`FLEXIBLE_ADAPTER_GUIDE.md`](flexible_adapter.md)
 
 ---
 

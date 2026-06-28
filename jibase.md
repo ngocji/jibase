@@ -5,6 +5,9 @@
 **Tech stack:** Kotlin · Coroutines/Flow · Hilt DI · ViewBinding · Navigation Component · Paging 3 · Glide · Gson  
 **Min SDK:** 21 · **Target SDK:** 35 · **JVM:** 17 · **Kotlin:** 2.0.0
 
+> **FlexibleAdapter / RecyclerView:** → [`flexible_adapter.md`](flexible_adapter.md)  
+> **Project overview & AI instructions:** → [`CLAUDE.md`](CLAUDE.md)
+
 ---
 
 ## Mục lục

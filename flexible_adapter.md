@@ -2,7 +2,8 @@
 
 > **Thuộc:** jibase Android Library (`com.ngocji:jibase`)  
 > **Package gốc:** `com.jibase.iflexible`  
-> **Tài liệu liên quan:** [`jibase.md`](jibase.md) (API các module khác) · [`CLAUDE.md`](CLAUDE.md) (project overview)
+> **Tài liệu liên quan:** [`jibase.md`](jibase.md) (API các module khác) · [`CLAUDE.md`](CLAUDE.md) (project overview)  
+> **File này:** `flexible_adapter.md`
 
 ## Mục lục
 
