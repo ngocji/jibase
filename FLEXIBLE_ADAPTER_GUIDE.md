@@ -1,5 +1,9 @@
 # FlexibleAdapter – Hướng dẫn chi tiết
 
+> **Thuộc:** jibase Android Library (`com.ngocji:jibase`)  
+> **Package gốc:** `com.jibase.iflexible`  
+> **Tài liệu liên quan:** [`jibase.md`](jibase.md) (API các module khác) · [`CLAUDE.md`](CLAUDE.md) (project overview)
+
 ## Mục lục
 
 1. [Tổng quan kiến trúc](#tổng-quan-kiến-trúc)
