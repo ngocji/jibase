@@ -44,7 +44,7 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
     private var builder: Builder? = null
 
     override fun initStyle(): Int {
-        return R.style.style_dialog_80
+        return builder?.styleRes ?: R.style.style_dialog_80
     }
 
     override fun onViewReady(savedInstanceState: Bundle?) {
@@ -246,6 +246,7 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         private val context: Context,
         private val theme: Int
     ) {
+        var styleRes: Int = R.style.style_dialog_80
         val config = ConfigDialog()
         val title = ConfigText()
         val subTitle = ConfigText()
@@ -592,6 +593,11 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
 
         fun setDoOnWindowCallback(callback: (Window) -> Unit): Builder {
             doOnWindowCallback = callback
+            return this
+        }
+
+        fun setStyle(@StyleRes style: Int): Builder {
+            this.styleRes = style
             return this
         }
 
