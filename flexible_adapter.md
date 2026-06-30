@@ -28,6 +28,7 @@
    - [Sticky Header](#sticky-header)
    - [Undo – Hoàn tác](#undo--hoàn-tác)
    - [Fast Scroller](#fast-scroller)
+   - [Configurations](#configurations)
 5. [FlexiblePagingAdapter – Paging 3](#flexiblepagingadapter--paging-3)
    - [Cơ chế hoạt động](#cơ-chế-hoạt-động)
    - [API](#api)
@@ -44,7 +45,7 @@
 ## Tổng quan kiến trúc
 
 ```
-AbstractFlexibleAdapter              ← Quản lý selection, FastScroller, bound ViewHolders
+AbstractFlexibleAdapter              ← Quản lý selection, FastScroller, bound ViewHolders, configurations
     └── AbstractFlexibleAnimatorAdapter  ← Quản lý animation khi scroll
             └── FlexibleAdapter<T>       ← Toàn bộ logic chính
                     └── FlexiblePagingAdapter<T>  ← FlexibleAdapter + Paging 3
@@ -912,6 +913,38 @@ Lấy instance hiện tại.
 **Custom bubble text:** Override trong item:
 ```kotlin
 override fun getBubbleText(position: Int): String = firstLetter
+```
+
+---
+
+### Configurations
+
+Key-value store gắn vào adapter, dùng để truyền cấu hình tuỳ ý từ bên ngoài vào mà không cần subclass hay biến riêng.
+
+#### `setConfig(key: String, value: Any)`
+Lưu một giá trị vào map theo key.
+
+#### `setConfigs(map: Map<String, Any>)`
+Lưu nhiều cặp key-value cùng lúc.
+
+#### `getConfig<T>(key: String): T?`
+Lấy giá trị theo key và tự cast sang kiểu `T`. Trả về `null` nếu key không tồn tại hoặc giá trị không thể cast.
+
+#### `removeConfig(key: String)`
+Xoá một key khỏi map.
+
+#### `clearConfigs()`
+Xoá toàn bộ configurations.
+
+**Ví dụ:**
+```kotlin
+adapter.setConfig("showDivider", true)
+adapter.setConfig("pageSize", 20)
+adapter.setConfigs(mapOf("theme" to "dark", "maxRetry" to 3))
+
+val showDivider = adapter.getConfig<Boolean>("showDivider")  // true
+val pageSize    = adapter.getConfig<Int>("pageSize")         // 20
+val invalid     = adapter.getConfig<Boolean>("pageSize")     // null — Int không cast sang Boolean
 ```
 
 ---

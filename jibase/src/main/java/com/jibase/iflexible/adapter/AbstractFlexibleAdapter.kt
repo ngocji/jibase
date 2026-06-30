@@ -30,6 +30,7 @@ abstract class AbstractFlexibleAdapter : RecyclerView.Adapter<RecyclerView.ViewH
 
     private val selectedPositions = mutableSetOf<Int>()
     private val boundViewHolders = mutableSetOf<FlexibleViewHolder>()
+    val configurations = mutableMapOf<String, Any>()
 
 
     /**
@@ -57,6 +58,30 @@ abstract class AbstractFlexibleAdapter : RecyclerView.Adapter<RecyclerView.ViewH
      * Action mode flag start selection
      */
     open var isActionModeStateEnable = false
+
+    /*--------------*/
+    /* CONFIGURATIONS */
+    /*--------------*/
+
+    fun setConfig(key: String, value: Any) {
+        configurations[key] = value
+    }
+
+    fun setConfigs(map: Map<String, Any>) {
+        configurations.putAll(map)
+    }
+
+    inline fun <reified T> getConfig(key: String): T? {
+        return configurations[key] as? T
+    }
+
+    fun removeConfig(key: String) {
+        configurations.remove(key)
+    }
+
+    fun clearConfigs() {
+        configurations.clear()
+    }
 
     /*--------------*/
     /* CHECK INITIALIZED */
