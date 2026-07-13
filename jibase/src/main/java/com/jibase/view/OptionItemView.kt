@@ -83,6 +83,20 @@ class OptionItemView @JvmOverloads constructor(
                 setDescColor(typeArray.getColor(R.styleable.OptionItemView_ot_desc_color, 0))
             }
 
+            setTextData(typeArray.getString(R.styleable.OptionItemView_ot_text_data))
+            setTextAppeared(
+                binding.tvText,
+                typeArray.getResourceId(R.styleable.OptionItemView_ot_text_data_text_appearance, -1)
+            )
+
+            val stateTextDataColor =
+                typeArray.getColorStateList(R.styleable.OptionItemView_ot_text_data_color)
+            if (stateTextDataColor != null) {
+                setTextDataColor(stateTextDataColor)
+            } else {
+                setTextDataColor(typeArray.getColor(R.styleable.OptionItemView_ot_text_data_color, 0))
+            }
+
             setIcon(
                 typeArray.getResourceId(
                     R.styleable.OptionItemView_ot_icon,
@@ -153,6 +167,16 @@ class OptionItemView @JvmOverloads constructor(
 
     fun setTextData(text: String?) {
         binding.tvText.text = text
+    }
+
+    fun setTextDataColor(color: ColorStateList?) {
+        if (color == null) return
+        binding.tvText.setTextColor(color)
+    }
+
+    fun setTextDataColor(color: Int) {
+        if (color == 0) return
+        binding.tvText.setTextColor(color)
     }
 
     fun setSwitchEnable(enable: Boolean) {

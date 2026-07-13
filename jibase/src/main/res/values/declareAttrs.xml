@@ -28,6 +28,10 @@
         <attr name="ot_desc_text_appearance" format="reference" />
         <attr name="ot_desc_color" format="color" />
 
+        <attr name="ot_text_data" format="string" />
+        <attr name="ot_text_data_text_appearance" format="reference" />
+        <attr name="ot_text_data_color" format="color" />
+
         <attr name="ot_type" format="enum">
             <enum name="switchData" value="0" />
             <enum name="textData" value="1" />
