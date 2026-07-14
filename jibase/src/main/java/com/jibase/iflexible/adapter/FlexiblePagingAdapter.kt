@@ -1,6 +1,7 @@
 package com.jibase.iflexible.adapter
 
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import androidx.paging.AsyncPagingDataDiffer
 import androidx.paging.CombinedLoadStates
 import androidx.paging.LoadState
@@ -118,16 +119,19 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         diffCallback = diffCallback,
         updateCallback = object : ListUpdateCallback {
             override fun onInserted(position: Int, count: Int) {
+                Log.d("differ.onInserted — position=$position, count=$count", TAG)
                 syncListData()
                 notifyItemRangeInserted(position + getScrollableHeaders().size, count)
             }
 
             override fun onRemoved(position: Int, count: Int) {
+                Log.d("differ.onRemoved — position=$position, count=$count", TAG)
                 syncListData()
                 notifyItemRangeRemoved(position + getScrollableHeaders().size, count)
             }
 
             override fun onMoved(fromPosition: Int, toPosition: Int) {
+                Log.d("differ.onMoved — fromPosition=$fromPosition, toPosition=$toPosition", TAG)
                 syncListData()
                 notifyItemMoved(
                     fromPosition + getScrollableHeaders().size,
@@ -136,6 +140,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
             }
 
             override fun onChanged(position: Int, count: Int, payload: Any?) {
+                Log.d("differ.onChanged — position=$position, count=$count, payload=$payload", TAG)
                 syncListData()
                 notifyItemRangeChanged(position + getScrollableHeaders().size, count, payload)
             }
@@ -149,6 +154,19 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * internals see a consistent state when RecyclerView calls [onBindViewHolder].
      * Headers/footers are re-inserted from their respective lists, so they survive every
      * paging refresh cycle.
+     *
+     * Called from three places:
+     * 1. Inside the [differ]'s [ListUpdateCallback] — runs before each `notifyItem*`.
+     * 2. Directly after [clearData] settles — reliable there because [PagingData.empty] is
+     *    static/finite, so [AsyncPagingDataDiffer.submitData] returns promptly. The same call in
+     *    [submitData] is *not* reliable for a real, live [PagingData]: per
+     *    [AsyncPagingDataDiffer.submitData]'s contract, that suspend call only returns once the
+     *    generation is superseded/invalidated, not once the current page settles.
+     * 3. From [startObservingLoadState] when append reports
+     *    [LoadState.NotLoading.endOfPaginationReached] — the reliable fix for a real,
+     *    live [PagingData] that diffs to zero changes (e.g. two consecutive empty pages),
+     *    since (1) never fires in that case and (2) can't be relied on either. Only active while
+     *    a progress item is configured (see [setEndlessProgressItem]).
      */
     private fun syncListData() {
         val headers = getScrollableHeaders()
@@ -156,6 +174,11 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         val pagingItems = differ.snapshot().items
         val progress = if (isProgressVisible) listOfNotNull(mPagingProgressItem) else emptyList()
         listData = (headers + pagingItems + footers + progress).toMutableList()
+        Log.d(
+            "syncListData — headers=${headers.size}, pagingItems=${pagingItems.size}, " +
+                    "footers=${footers.size}, progress=${progress.size}, total=${listData.size}",
+            TAG
+        )
         onPostUpdate()
     }
 
@@ -174,7 +197,12 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         if (pagingIndex in 0 until pagingItemCount) {
             differ.getItem(pagingIndex)
         }
-        return listData.getOrNull(position)
+        val item = listData.getOrNull(position)
+        Log.d(
+            "getItem — position=$position, pagingIndex=$pagingIndex, pagingItemCount=$pagingItemCount, item=$item",
+            TAG
+        )
+        return item
     }
 
     /* ────────────────────────────────────────────────────── */
@@ -199,8 +227,13 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      *     viewModel.pagingFlow.collectLatest { adapter.submitData(it) }
      * }
      * ```
+     *
+     * [syncListData] is force-called once more after the differ settles, even if it reports
+     * no changes (e.g. submitting two consecutive empty pages) — see [syncListData] for why
+     * that matters.
      */
     suspend fun submitData(pagingData: PagingData<T>) {
+        Log.d("submitData — pagingData=$pagingData", TAG)
         _isPagingDataSubmitted = true
         differ.submitData(pagingData)
     }
@@ -214,8 +247,13 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * ```kotlin
      * viewModel.pagingFlow.observe(viewLifecycleOwner) { adapter.submitData(lifecycle, it) }
      * ```
+     *
+     * Implemented on top of the suspending [submitData] (rather than delegating to
+     * [AsyncPagingDataDiffer.submitData]'s own lifecycle overload) so the post-settle
+     * [syncListData] call still runs — see [submitData] and [syncListData].
      */
     fun submitData(lifecycle: Lifecycle, pagingData: PagingData<T>) {
+        Log.d("submitData(lifecycle) — pagingData=$pagingData, lifecycle=$lifecycle", TAG)
         _isPagingDataSubmitted = true
         differ.submitData(lifecycle, pagingData)
     }
@@ -240,6 +278,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * @see removeLoadStateListener
      */
     fun addLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
+        Log.d("addLoadStateListener — listener=$listener", TAG)
         differ.addLoadStateListener(listener)
     }
 
@@ -249,6 +288,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * @see addLoadStateListener
      */
     fun removeLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
+        Log.d("removeLoadStateListener — listener=$listener", TAG)
         differ.removeLoadStateListener(listener)
     }
 
@@ -257,7 +297,10 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      *
      * Has no effect if the last load succeeded or if no load has been attempted yet.
      */
-    fun retry() = differ.retry()
+    fun retry() {
+        Log.d("retry", TAG)
+        differ.retry()
+    }
 
     /**
      * Invalidates the current [PagingData] and triggers a fresh load from page 1.
@@ -269,7 +312,42 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * swipeRefreshLayout.setOnRefreshListener { adapter.refresh() }
      * ```
      */
-    fun refresh() = differ.refresh()
+    fun refresh() {
+        Log.d("refresh", TAG)
+        differ.refresh()
+    }
+
+    /**
+     * Clears all paging data, resetting the adapter back to its pristine, pre-[submitData]
+     * state: [listData] collapses to just scrollable headers/footers and [isPagingDataSubmitted]
+     * becomes `false` again.
+     *
+     * This is a **suspending** call that returns only after the differ has fully processed
+     * the clear, same as [submitData]:
+     *
+     * ```kotlin
+     * lifecycleScope.launch { adapter.clearData() }
+     * ```
+     *
+     * [syncListData] is force-called once more after the differ settles, even if it reports
+     * no changes (e.g. the differ was already empty) — see [syncListData] for why that matters.
+     */
+    suspend fun clearData() {
+        Log.d("clearData — before, itemCount=$itemCount", TAG)
+        _isPagingDataSubmitted = false
+        differ.submitData(PagingData.empty())
+        Log.d("clearData — done, itemCount=$itemCount", TAG)
+    }
+
+    /**
+     * Clears all paging data, tied to the given [lifecycle]. See [clearData] and the
+     * [submitData] lifecycle overload for details.
+     */
+    fun clearData(lifecycle: Lifecycle) {
+        Log.d("clearData(lifecycle) — lifecycle=$lifecycle", TAG)
+        _isPagingDataSubmitted = false
+        lifecycle.coroutineScope.launch { clearData() }
+    }
 
     /* ────────────────────────────────────────────────────── */
     /*  PROGRESS ITEM                                         */
@@ -310,6 +388,10 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * @return this adapter for chaining
      */
     override fun setEndlessProgressItem(progressItem: T?): FlexiblePagingAdapter<T> {
+        Log.d(
+            "setEndlessProgressItem — progressItem=$progressItem, isProgressVisible=$isProgressVisible",
+            TAG
+        )
         if (isProgressVisible) {
             val oldPos = listData.indexOf(mPagingProgressItem)
             isProgressVisible = false
@@ -319,8 +401,9 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         } else {
             mPagingProgressItem = progressItem
         }
-        if (progressItem != null && recyclerViewHasInitialized()) startObservingLoadState()
-        else if (progressItem == null) {
+        if (progressItem != null && recyclerViewHasInitialized()) {
+            startObservingLoadState()
+        } else if (progressItem == null) {
             loadStateJob?.cancel()
             loadStateJob = null
         }
@@ -333,6 +416,15 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * Shows [mPagingProgressItem] by appending it to [listData] when append is
      * [LoadState.Loading]; removes it directly from [listData] otherwise.
      * Neither operation touches [mScrollableFooters].
+     *
+     * Also force-syncs [listData] whenever append reports
+     * [LoadState.NotLoading.endOfPaginationReached] — unlike a zero-arg [PagingData.empty] (whose
+     * `sourceLoadStates` is `null` and therefore leaves [loadStateFlow] untouched),
+     * `endOfPaginationReached = true` can only come from a real load (the [PagingSource][androidx.paging.PagingSource]
+     * reported `nextKey = null`), so it's a reliable, real signal that this generation has
+     * genuinely settled — a good point to reconcile [listData] even if the diff that produced it
+     * was zero-change (e.g. a second consecutive empty page) and therefore never reached
+     * [syncListData] via the [differ]'s [ListUpdateCallback]. See [syncListData].
      */
     private fun startObservingLoadState() {
         Log.d("Start observing load state - $mPagingProgressItem", TAG)
@@ -340,9 +432,23 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
         loadStateJob = pagingScope.launch {
             loadStateFlow.collectLatest { loadState ->
                 Log.d("Change state — $loadState, progressItem=$mPagingProgressItem", TAG)
-                mPagingProgressItem ?: return@collectLatest
+                val append = loadState.append
+                if (append is LoadState.NotLoading && append.endOfPaginationReached) {
+                    Log.d("Change state — endOfPaginationReached, forcing syncListData()", TAG)
+                    syncListData()
+                }
+                if (mPagingProgressItem == null) {
+                    Log.d("Change state — skip, mPagingProgressItem is null", TAG)
+                    return@collectLatest
+                }
                 val shouldShow = loadState.append is LoadState.Loading
-                if (shouldShow == isProgressVisible) return@collectLatest
+                if (shouldShow == isProgressVisible) {
+                    Log.d(
+                        "Change state — skip, shouldShow=$shouldShow already == isProgressVisible",
+                        TAG
+                    )
+                    return@collectLatest
+                }
                 if (shouldShow) {
                     isProgressVisible = true
                     syncListData()
@@ -368,6 +474,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * RecyclerView is ready, then delegates to [FlexibleAdapter] for pending-config application.
      */
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        Log.d("onAttachedToRecyclerView — mPagingProgressItem=$mPagingProgressItem", TAG)
         super.onAttachedToRecyclerView(recyclerView)
         if (mPagingProgressItem != null) startObservingLoadState()
     }
@@ -377,6 +484,7 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * then delegates to [FlexibleAdapter] for its own cleanup.
      */
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        Log.d("onDetachedFromRecyclerView", TAG)
         loadStateJob?.cancel()
         loadStateJob = null
         pagingScope.cancel()
@@ -391,11 +499,15 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
      * No-op. Paging 3 owns the loading lifecycle and triggers the next page automatically
      * based on [androidx.paging.PagingConfig.prefetchDistance]; this method must not interfere.
      */
-    override fun onLoadMore(position: Int) = Unit
+    override fun onLoadMore(position: Int) {
+        Log.d("onLoadMore — no-op, position=$position", TAG)
+    }
 
     /**
      * No-op. Data insertion after a page load is handled entirely by [AsyncPagingDataDiffer]
      * via [syncListData]; calling this method directly would corrupt the differ's state.
      */
-    override fun onLoadMoreComplete(newItems: List<T>, delay: Long) = Unit
+    override fun onLoadMoreComplete(newItems: List<T>, delay: Long) {
+        Log.d("onLoadMoreComplete — no-op, newItems=${newItems.size}, delay=$delay", TAG)
+    }
 }

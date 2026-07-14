@@ -979,6 +979,14 @@ submitData(PagingData<T>)
 - Positions từ differ (relative to paging items) được offset thêm `scrollableHeaders.size` trước khi notify RecyclerView
 - `enablePlaceholders = false` trong `PagingConfig` được khuyến nghị để tránh null trong `listData`
 
+**Lưu ý — zero-diff submit:** `AsyncPagingDataDiffer` chỉ gọi `ListUpdateCallback` khi diff thực sự có thay đổi. Submit 2 trang giống nhau liên tiếp (vd. 2 trang rỗng) thì callback không bắn, nên `syncListData()` (chỉ nằm trong callback) sẽ không tự chạy → `listData` lệch khỏi headers/footers/snapshot hiện tại. Có 3 nơi gọi `syncListData()`:
+
+1. Trong `ListUpdateCallback` của `differ` — trước mỗi `notifyItem*`.
+2. Sau `differ.submitData(PagingData.empty())` trong `clearData()` — an toàn vì `PagingData.empty()` là static/finite nên `submitData()` (suspend) trả về ngay. **Lưu ý:** cách này KHÔNG dùng được cho `submitData(pagingData)` với data thật (live) — theo đúng contract của `AsyncPagingDataDiffer.submitData`, hàm suspend đó chỉ return khi generation bị thay thế/invalidate, không phải khi trang hiện tại load xong, nên với Pager thật code đặt sau `differ.submitData(pagingData)` gần như không bao giờ chạy trong lúc dùng bình thường.
+3. Trong `startObservingLoadState()` (tức là chỉ chạy khi đã `setEndlessProgressItem(...)`), khi `loadState.append` là `NotLoading(endOfPaginationReached = true)` — đây là fix thật sự cho case zero-diff với data thật. `endOfPaginationReached = true` chỉ có thể đến từ 1 lần load thật (PagingSource trả `nextKey = null`), **không** đến từ `PagingData.empty()` (mặc định `sourceLoadStates = null` → giữ nguyên `loadStateFlow` cũ, không set `endOfPaginationReached`), nên đây là tín hiệu đáng tin cậy để biết generation đã thực sự settle và force sync lại `listData`.
+
+**Giới hạn hiện tại:** fix (3) chỉ hoạt động khi adapter có set `setEndlessProgressItem(...)` (vì đó là điều kiện `startObservingLoadState()` được khởi động). Adapter không dùng progress item vẫn có thể gặp lại tình trạng `listData` lệch khi submit 2 trang rỗng liên tiếp từ data thật.
+
 ---
 
 ### API
@@ -989,6 +997,9 @@ submitData(PagingData<T>)
 |--------|-------|
 | `submitData(pagingData: PagingData<T>)` | Suspend – submit data mới, dùng trong coroutine |
 | `submitData(lifecycle, pagingData)` | Non-suspend – tự cancel khi lifecycle destroy |
+| `clearData()` | Suspend – reset về trạng thái ban đầu (như chưa từng `submitData`): `listData` chỉ còn headers/footers, `isPagingDataSubmitted` về `false` |
+| `clearData(lifecycle)` | Non-suspend – bản `clearData()` tự cancel khi lifecycle destroy |
+| `isPagingDataSubmitted: Boolean` | `true` kể từ lần `submitData` đầu tiên; về `false` sau `clearData()` |
 | `loadStateFlow: Flow<CombinedLoadStates>` | Observe trạng thái load (refresh / prepend / append) |
 | `addLoadStateListener(listener)` | Đăng ký listener trạng thái |
 | `removeLoadStateListener(listener)` | Hủy listener |
@@ -1539,6 +1550,11 @@ class MyFragment : Fragment(), OnItemClickListener {
 
         // Retry khi lỗi append
         btnRetry.setOnClickListener { adapter.retry() }
+
+        // Reset về trạng thái ban đầu (vd. khi đổi tab / logout)
+        btnClear.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch { adapter.clearData() }
+        }
     }
 
     override fun onItemClick(adapter: FlexibleAdapter<*>, view: View, position: Int): Boolean {
