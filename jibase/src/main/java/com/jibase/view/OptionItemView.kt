@@ -372,7 +372,7 @@ class OptionItemView @JvmOverloads constructor(
                 }
             }
             updateLayoutParams<LayoutParams> {
-                setMargins(left, margin, right, bottom)
+                setMargins(left, margin, right, 0)
                 if (fillWidth) {
                     startToStart = LayoutParams.PARENT_ID
                 }
