@@ -1160,7 +1160,7 @@ optionItem.setImageData(R.drawable.img) // khi type = IMAGE
 
 optionItem.updateLineUI(
     visible = true,
-    margin = 16,    // px, margin left của divider
+    margin = 16,    // px, margin trên (top) của divider — margin dưới luôn = 0
     fillWidth = false,
     tintColor = Color.LTGRAY
 )
