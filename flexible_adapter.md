@@ -1005,6 +1005,8 @@ submitData(PagingData<T>)
 | `removeLoadStateListener(listener)` | Hủy listener |
 | `retry()` | Retry lần load cuối bị lỗi |
 | `refresh()` | Invalidate PagingData và load lại từ đầu |
+| `addListUpdateCallback(callback: ListUpdateCallback)` | Đăng ký callback được gọi sau mỗi `notifyItem*` nội bộ (insert/remove/move/change) đã dispatch xong. Position truyền vào đã offset theo `scrollableHeaders.size`, khớp với position thật trên RecyclerView |
+| `removeListUpdateCallback(callback: ListUpdateCallback)` | Hủy callback đã đăng ký |
 
 #### Progress Item (bottom loading indicator)
 

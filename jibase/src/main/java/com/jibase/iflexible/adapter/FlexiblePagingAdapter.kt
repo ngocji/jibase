@@ -121,31 +121,67 @@ open class FlexiblePagingAdapter<T : IFlexible<*>>(
             override fun onInserted(position: Int, count: Int) {
                 Log.d("differ.onInserted — position=$position, count=$count", TAG)
                 syncListData()
-                notifyItemRangeInserted(position + getScrollableHeaders().size, count)
+                val offsetPosition = position + getScrollableHeaders().size
+                notifyItemRangeInserted(offsetPosition, count)
+                externalListUpdateCallbacks.forEach { it.onInserted(offsetPosition, count) }
             }
 
             override fun onRemoved(position: Int, count: Int) {
                 Log.d("differ.onRemoved — position=$position, count=$count", TAG)
                 syncListData()
-                notifyItemRangeRemoved(position + getScrollableHeaders().size, count)
+                val offsetPosition = position + getScrollableHeaders().size
+                notifyItemRangeRemoved(offsetPosition, count)
+                externalListUpdateCallbacks.forEach { it.onRemoved(offsetPosition, count) }
             }
 
             override fun onMoved(fromPosition: Int, toPosition: Int) {
                 Log.d("differ.onMoved — fromPosition=$fromPosition, toPosition=$toPosition", TAG)
                 syncListData()
-                notifyItemMoved(
-                    fromPosition + getScrollableHeaders().size,
-                    toPosition + getScrollableHeaders().size
-                )
+                val headersSize = getScrollableHeaders().size
+                val offsetFrom = fromPosition + headersSize
+                val offsetTo = toPosition + headersSize
+                notifyItemMoved(offsetFrom, offsetTo)
+                externalListUpdateCallbacks.forEach { it.onMoved(offsetFrom, offsetTo) }
             }
 
             override fun onChanged(position: Int, count: Int, payload: Any?) {
                 Log.d("differ.onChanged — position=$position, count=$count, payload=$payload", TAG)
                 syncListData()
-                notifyItemRangeChanged(position + getScrollableHeaders().size, count, payload)
+                val offsetPosition = position + getScrollableHeaders().size
+                notifyItemRangeChanged(offsetPosition, count, payload)
+                externalListUpdateCallbacks.forEach { it.onChanged(offsetPosition, count, payload) }
             }
         }
     )
+
+    /** External [ListUpdateCallback]s notified after each `notifyItem*` call above dispatches. */
+    private val externalListUpdateCallbacks = mutableListOf<ListUpdateCallback>()
+
+    /**
+     * Registers [callback] to be notified after every [differ] update has been applied to
+     * [listData] and the corresponding `notifyItem*` call has been dispatched to the
+     * RecyclerView.
+     *
+     * Positions passed to [callback] are already offset by [getScrollableHeaders]'s size,
+     * i.e. they match the actual adapter position used in the `notifyItem*` call — not the
+     * raw paging-snapshot position reported by [AsyncPagingDataDiffer].
+     *
+     * @see removeListUpdateCallback
+     */
+    fun addListUpdateCallback(callback: ListUpdateCallback) {
+        Log.d("addListUpdateCallback — callback=$callback", TAG)
+        if (!externalListUpdateCallbacks.contains(callback)) {
+            externalListUpdateCallbacks.add(callback)
+        }
+    }
+
+    /**
+     * Unregisters a [callback] previously added via [addListUpdateCallback].
+     */
+    fun removeListUpdateCallback(callback: ListUpdateCallback) {
+        Log.d("removeListUpdateCallback — callback=$callback", TAG)
+        externalListUpdateCallbacks.remove(callback)
+    }
 
     /**
      * Rebuilds [listData] from scrollable headers + paging snapshot + scrollable footers.
