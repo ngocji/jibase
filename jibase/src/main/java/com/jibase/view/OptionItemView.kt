@@ -157,6 +157,27 @@ class OptionItemView @JvmOverloads constructor(
                 typeArray.getBoolean(R.styleable.OptionItemView_ot_line_fill_width, false),
                 typeArray.getColor(R.styleable.OptionItemView_ot_line_color, Color.TRANSPARENT)
             )
+
+            val contentPadding =
+                typeArray.getDimensionPixelOffset(R.styleable.OptionItemView_ot_content_padding, -1)
+            setContentPadding(
+                typeArray.getDimensionPixelOffset(
+                    R.styleable.OptionItemView_ot_content_padding_start,
+                    contentPadding
+                ),
+                typeArray.getDimensionPixelOffset(
+                    R.styleable.OptionItemView_ot_content_padding_top,
+                    contentPadding
+                ),
+                typeArray.getDimensionPixelOffset(
+                    R.styleable.OptionItemView_ot_content_padding_end,
+                    contentPadding
+                ),
+                typeArray.getDimensionPixelOffset(
+                    R.styleable.OptionItemView_ot_content_padding_bottom,
+                    contentPadding
+                )
+            )
             typeArray.recycle()
         }
     }
@@ -357,6 +378,15 @@ class OptionItemView @JvmOverloads constructor(
             thumbDrawable = null
             background = null
         }
+    }
+
+    fun setContentPadding(start: Int, top: Int, end: Int, bottom: Int) {
+        binding.ll.setPaddingRelative(
+            start.takeIf { it >= 0 } ?: binding.ll.paddingStart,
+            top.takeIf { it >= 0 } ?: binding.ll.paddingTop,
+            end.takeIf { it >= 0 } ?: binding.ll.paddingEnd,
+            bottom.takeIf { it >= 0 } ?: binding.ll.paddingBottom
+        )
     }
 
     fun updateLineUI(visible: Boolean, margin: Int, fillWidth: Boolean, tintColor: Int) {

@@ -48,5 +48,11 @@
         <attr name="ot_end_icon_tint" format="color" />
 
         <attr name="ot_switch_button" format="reference" />
+
+        <attr name="ot_content_padding" format="dimension" />
+        <attr name="ot_content_padding_start" format="dimension" />
+        <attr name="ot_content_padding_top" format="dimension" />
+        <attr name="ot_content_padding_end" format="dimension" />
+        <attr name="ot_content_padding_bottom" format="dimension" />
     </declare-styleable>
 </resources>
