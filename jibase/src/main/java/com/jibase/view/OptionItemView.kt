@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.widget.CompoundButton
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.widget.ImageViewCompat
@@ -94,7 +95,12 @@ class OptionItemView @JvmOverloads constructor(
             if (stateTextDataColor != null) {
                 setTextDataColor(stateTextDataColor)
             } else {
-                setTextDataColor(typeArray.getColor(R.styleable.OptionItemView_ot_text_data_color, 0))
+                setTextDataColor(
+                    typeArray.getColor(
+                        R.styleable.OptionItemView_ot_text_data_color,
+                        0
+                    )
+                )
             }
 
             setIcon(
@@ -111,6 +117,9 @@ class OptionItemView @JvmOverloads constructor(
             )
             setIconGravity(
                 typeArray.getInt(R.styleable.OptionItemView_ot_icon_gravity, -1)
+            )
+            setIconMarginTop(
+                typeArray.getDimensionPixelOffset(R.styleable.OptionItemView_ot_icon_margin_top, -1)
             )
             val stateIconColor =
                 typeArray.getColorStateList(R.styleable.OptionItemView_ot_icon_tint)
@@ -291,9 +300,20 @@ class OptionItemView @JvmOverloads constructor(
         }
     }
 
+    fun setIconMarginTop(margin: Int) {
+        if (margin < 0) return
+        binding.imageIcon.updateLayoutParams<LayoutParams> {
+            topMargin = margin
+        }
+    }
+
     fun setIconTint(color: Int) {
         with(binding.imageIcon) {
-            if (color == 0) {
+            if (color == 0 || color == ContextCompat.getColor(
+                    context,
+                    android.R.color.transparent
+                ) || color == ContextCompat.getColor(context, R.color.trans)
+            ) {
                 clearColorFilter()
             } else {
                 setColorFilter(color)

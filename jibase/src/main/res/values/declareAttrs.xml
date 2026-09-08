@@ -14,6 +14,7 @@
         <attr name="ot_icon" format="reference" />
         <attr name="ot_icon_size" format="dimension" />
         <attr name="ot_icon_tint" format="color" />
+        <attr name="ot_icon_margin_top" format="dimension" />
         <attr name="ot_icon_gravity" format="enum">
             <enum name="top" value="0" />
             <enum name="center_vertical" value="1" />
