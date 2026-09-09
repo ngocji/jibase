@@ -9,7 +9,7 @@ import com.jibase.extensions.viewBinding
 import com.jibase.permission.OnDenyPermissionListener
 import com.jibase.permission.Permission
 import com.jibase.permission.PermissionsHelper
-import com.jibase.pref.SharePref
+import com.jibase.pref.DataStoreHelper
 import com.jibase.utils.Log
 import comx.y.z.kotlinbase.R
 import comx.y.z.kotlinbase.databinding.FragmentRequestPermissionBinding
@@ -22,7 +22,7 @@ class RequestPermissionFragment : Fragment(R.layout.fragment_request_permission)
     private val binding by viewBinding(FragmentRequestPermissionBinding::bind)
 
     @Inject
-    lateinit var sharePref: SharePref
+    lateinit var dataStoreHelper: DataStoreHelper
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 

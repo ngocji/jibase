@@ -31,7 +31,7 @@
 17. [TimerExt — Đồng hồ đếm](#17-timerext)
 18. [RectExt — Geometry helpers](#18-rectext)
 19. [Exts — Tiện ích chung](#19-exts)
-20. [SharePref — SharedPreferences wrapper](#20-sharepref)
+20. [DataStoreHelper — DataStore Preferences wrapper](#20-datastorehelper)
 21. [SessionHelper — In-memory cache](#21-sessionhelper)
 22. [GsonManager — JSON serialize/deserialize](#22-gsonmanager)
 23. [EdittextDebounceExt — Debounce search](#23-edittextdebounceext)
@@ -724,36 +724,49 @@ list hasPosition 5   // infix — true nếu 5 in list.indices
 
 ---
 
-## 20. SharePref
+## 20. DataStoreHelper
 
-**File:** `com.jibase.pref.SharePref`
+**File:** `com.jibase.pref.DataStoreHelper`
 
-**Lưu ý quan trọng:** Tất cả primitive đều lưu dưới dạng String để tránh ClassCastException khi đổi type.
+Wrapper quanh Jetpack DataStore (Preferences). Đọc trả về `Flow`, ghi/xóa là `suspend fun`.
 
 ```kotlin
-val pref = SharePref(context, "pref_name")
+val pref = DataStoreHelper(context, "pref_name")
 // Hoặc inject qua Hilt (xem phần Hilt DI)
 ```
 
-### Đọc
+### Đọc (Flow)
 
 ```kotlin
-pref.getString("key", "default"): String
-pref.getInt("key", 0): Int
-pref.getLong("key", 0L): Long
-pref.getFloat("key", 0f): Float
-pref.getDouble("key", 0.0): Double
-pref.getBoolean("key", false): Boolean
+pref.getString("key", "default"): Flow<String>
+pref.getInt("key", 0): Flow<Int>
+pref.getLong("key", 0L): Flow<Long>
+pref.getFloat("key", 0f): Flow<Float>
+pref.getDouble("key", 0.0): Flow<Double>
+pref.getBoolean("key", false): Flow<Boolean>
 
 // Object — deserialize từ JSON
-pref.getObject<MyClass>("key", MyClass::class.java): MyClass?
-pref.getObject<List<MyClass>>("key", getTypeToken<List<MyClass>>()): List<MyClass>?
+pref.getObject<MyClass>("key", MyClass::class.java): Flow<MyClass?>
+pref.getObject<List<MyClass>>("key", getTypeToken<List<MyClass>>()): Flow<List<MyClass>?>
 
 // Kiểm tra tồn tại
-pref.contains("key"): Boolean
+pref.contains("key"): Flow<Boolean>
 ```
 
-### Ghi
+### Đọc (Blocking — không cần CoroutineScope)
+
+```kotlin
+pref.getStringBlocking("key", "default"): String
+pref.getIntBlocking("key", 0): Int
+pref.getLongBlocking("key", 0L): Long
+pref.getFloatBlocking("key", 0f): Float
+pref.getDoubleBlocking("key", 0.0): Double
+pref.getBooleanBlocking("key", false): Boolean
+pref.getObjectBlocking<MyClass>("key", MyClass::class.java): MyClass?
+pref.containsBlocking("key"): Boolean
+```
+
+### Ghi (suspend)
 
 ```kotlin
 pref.putString("key", "value")
@@ -766,17 +779,14 @@ pref.putBoolean("key", true)
 // Object — serialize sang JSON
 pref.putObject("key", myObject)    // null → xóa key
 
-// Generic — tự detect type (Boolean/Int/Long/Float/String/Double → String, else → JSON)
+// Generic — tự detect type (Boolean/Int/Long/Float/String/Double → primitive, else → JSON)
 pref.put("key", value)
 ```
 
-### Xóa & Listen
+### Xóa
 
 ```kotlin
-pref.remove("key1", "key2")    // vararg
-
-pref.registerChange(listener)   // OnSharedPreferenceChangeListener
-pref.unregisterChange(listener)
+pref.remove("key1", "key2")    // vararg, suspend
 ```
 
 ---
@@ -1637,10 +1647,10 @@ Chỉ hoạt động với `LinearLayoutManager`. Dùng `scrollToPositionWithOff
 **File:** `com.jibase.retriever.BaseDataRetriever`
 
 ```kotlin
-class MyRetriever(pref: SharePref) : BaseDataRetriever<List<Item>>(
-    prefLastRefreshTime = "last_refresh_items",  // key lưu timestamp trong SharePref
+class MyRetriever(pref: DataStoreHelper) : BaseDataRetriever<List<Item>>(
+    prefLastRefreshTime = "last_refresh_items",  // key lưu timestamp trong DataStoreHelper
     refreshInterval = 30 * 60 * 1000L,           // 30 phút (ms)
-    sharePref = pref
+    dataStoreHelper = pref
 ) {
     override suspend fun getRemote(): List<Item>? = api.getItems()
     override suspend fun getLocal(): List<Item>? = db.getAll()
@@ -1664,10 +1674,10 @@ val data: T? = retriever.getCacheAsset(context, "data/items.json", getTypeToken<
 **File:** `com.jibase.retriever.BaseFileDataRetriever`
 
 ```kotlin
-class MyFileRetriever(pref: SharePref) : BaseFileDataRetriever<MyData>(
+class MyFileRetriever(pref: DataStoreHelper) : BaseFileDataRetriever<MyData>(
     prefLastRefreshTime = "last_refresh",
     refreshInterval = 3_600_000L,
-    sharePref = pref,
+    dataStoreHelper = pref,
     file = File(context.filesDir, "data.json"),
     type = getTypeToken<MyData>()
 ) {
@@ -1703,10 +1713,10 @@ Module cung cấp sẵn:
 ```kotlin
 // Cần provide @DefaultPrefName qualifier trong app module
 @Provides @Singleton
-fun providerDefaultSharePrefHelper(
+fun providerDefaultDataStoreHelper(
     @ApplicationContext ctx: Context,
     @DefaultPrefName name: String
-): SharePref
+): DataStoreHelper
 ```
 
 Trong app module:
@@ -1809,7 +1819,7 @@ implementation("com.ngocji:jibase:4.3.3")
 | Timer flow | `extensions/TimerExt.kt` |
 | Geometry helpers | `extensions/RectExt.kt` |
 | Duration / size format | `extensions/Exts.kt` |
-| SharedPrefs | `pref/SharePref.kt` |
+| SharedPrefs (Flow) | `pref/DataStoreHelper.kt` |
 | In-memory store | `helper/SessionHelper.kt` |
 | JSON | `helper/GsonManager.kt` |
 | Debounce search | `helper/EdittextDebounceExt.kt` |

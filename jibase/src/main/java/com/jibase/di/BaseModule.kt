@@ -1,7 +1,7 @@
 package com.jibase.di
 
 import android.content.Context
-import com.jibase.pref.SharePref
+import com.jibase.pref.DataStoreHelper
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,10 +14,10 @@ import javax.inject.Singleton
 class BaseModule {
     @Provides
     @Singleton
-    fun providerDefaultSharePrefHelper(
+    fun providerDefaultDataStoreHelper(
         @ApplicationContext context: Context,
         @DefaultPrefName name: String
-    ): SharePref {
-        return SharePref(context, name)
+    ): DataStoreHelper {
+        return DataStoreHelper(context, name)
     }
 }

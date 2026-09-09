@@ -3,16 +3,17 @@ package com.jibase.retriever
 import android.content.Context
 import com.jibase.helper.AssetsUtils
 import com.jibase.helper.GsonManager
-import com.jibase.pref.SharePref
+import com.jibase.pref.DataStoreHelper
 import com.jibase.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.lang.reflect.Type
 
 abstract class BaseDataRetriever<T>(
     private val prefLastRefreshTime: String,
     private val refreshInterval: Long,
-    private val sharePref: SharePref
+    private val dataStoreHelper: DataStoreHelper
 ) {
     private var data: T? = null
 
@@ -54,13 +55,13 @@ abstract class BaseDataRetriever<T>(
 
     fun isAvailableData() = data != null
 
-    private fun needRefresh(): Boolean {
-        val lastTimeLoaded = sharePref.getLong(prefLastRefreshTime, 0L)
+    private suspend fun needRefresh(): Boolean {
+        val lastTimeLoaded = dataStoreHelper.getLong(prefLastRefreshTime, 0L).first()
         val currentTime = System.currentTimeMillis()
         return currentTime - lastTimeLoaded > refreshInterval
     }
 
-    private fun setRefreshTime() {
-        sharePref.put(prefLastRefreshTime, System.currentTimeMillis())
+    private suspend fun setRefreshTime() {
+        dataStoreHelper.put(prefLastRefreshTime, System.currentTimeMillis())
     }
 }

@@ -25,7 +25,7 @@ jibase/src/main/java/com/jibase/
 ├── helper/       # GsonManager, SessionHelper, BitmapUtils, KeyboardHelper…
 ├── iflexible/    # FlexibleAdapter ecosystem (RecyclerView)
 ├── permission/   # PermissionsHelper (runtime permissions)
-├── pref/         # SharePref (SharedPreferences wrapper)
+├── pref/         # DataStoreHelper (DataStore Preferences wrapper, trả về Flow)
 ├── retriever/    # BaseDataRetriever + BaseFileDataRetriever + BaseAssetDataRetriever
 ├── ui/           # BaseDialog, BaseBottomDialog, ConfirmDialog
 ├── utils/        # Log, FileUtils, FragmentUtils, IntentUtils, HighlightUtils, Utils…
@@ -98,7 +98,7 @@ class MyFragment : Fragment(R.layout.fragment_my) {
 ## Quy tắc quan trọng
 
 - **Flow collection:** `collect` cho UI state (StateFlow), `collectOne` cho one-shot events
-- **SharePref:** mọi primitive lưu dưới dạng String — thiết kế cố ý, không thay đổi
+- **DataStoreHelper:** get trả `Flow`, put/remove là `suspend fun`; có sẵn các hàm `getXxxBlocking`/`containsBlocking` cho nơi không có CoroutineScope
 - **SessionHelper:** in-memory only — mất khi process bị kill
 - **DataCacheManager:** dùng coroutine scope của caller — không tự manage lifecycle
 - **safeFlow():** dùng `mapLatest` — chỉ lấy emission cuối nếu upstream nhanh
@@ -133,7 +133,7 @@ implementation("com.ngocji:jibase:4.3.3")
 | Navigate (NavComponent) | `extensions/NavControllerExtension.kt` + `FragmentNavExtensions.kt` |
 | Quản lý Fragment thủ công | `utils/FragmentUtils.kt` |
 | ViewBinding delegate | `extensions/ViewBindingDelegate.kt` |
-| SharedPrefs | `pref/SharePref.kt` |
+| SharedPrefs (Flow) | `pref/DataStoreHelper.kt` |
 | In-memory cache | `helper/SessionHelper.kt` |
 | JSON | `helper/GsonManager.kt` |
 | Permissions | `permission/PermissionsHelper.kt` |

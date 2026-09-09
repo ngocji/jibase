@@ -2,7 +2,7 @@ package com.jibase.retriever
 
 import com.jibase.helper.FileBackupHelper
 import com.jibase.helper.GsonManager
-import com.jibase.pref.SharePref
+import com.jibase.pref.DataStoreHelper
 import com.jibase.utils.readTextFromInputStream
 import com.jibase.utils.writeToFile
 import java.io.File
@@ -11,10 +11,10 @@ import java.lang.reflect.Type
 abstract class BaseFileDataRetriever<T>(
     prefLastRefreshTime: String,
     refreshInterval: Long,
-    sharePref: SharePref,
+    dataStoreHelper: DataStoreHelper,
     open val file: File,
     open val type: Type
-) : BaseDataRetriever<T>(prefLastRefreshTime, refreshInterval, sharePref) {
+) : BaseDataRetriever<T>(prefLastRefreshTime, refreshInterval, dataStoreHelper) {
 
     private val fileBackupHelper = FileBackupHelper(file)
 
