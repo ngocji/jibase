@@ -323,7 +323,7 @@ class OptionItemView @JvmOverloads constructor(
 
     fun setIconTint(color: ColorStateList?) {
         with(binding.imageIcon) {
-            if (color == null) {
+            if (color == null || Color.alpha(color.defaultColor) == 0) {
                 clearColorFilter()
             } else {
                 ImageViewCompat.setImageTintList(this, color)
