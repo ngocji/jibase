@@ -251,13 +251,7 @@ class ConfirmDialog(@StyleRes theme: Int) : BaseDialog(R.layout.dialog_confirm, 
         val title = ConfigText()
         val subTitle = ConfigText()
         val message = ConfigText()
-        val buttonConfirm =
-            ConfigButton(
-                backgroundColor = ContextCompat.getColor(
-                    context,
-                    com.jibase.R.color.colorAccent
-                )
-            )
+        val buttonConfirm = ConfigButton()
         val buttonCancel = ConfigButton()
 
         var doOnWindowCallback: ((Window) -> Unit)? = null
