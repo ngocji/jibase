@@ -13,10 +13,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.jibase.helper.GsonManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlin.coroutines.coroutineContext
 import java.lang.reflect.Type
 
 /**
@@ -29,6 +33,8 @@ class DataStoreHelper(context: Context, prefName: String) {
             produceFile = { context.preferencesDataStoreFile(prefName) }
         )
     }
+
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun getBoolean(key: String, defaultValue: Boolean): Flow<Boolean> =
         dataStore.data.map { it[booleanPreferencesKey(key)] ?: defaultValue }
@@ -76,34 +82,6 @@ class DataStoreHelper(context: Context, prefName: String) {
             }
         }
 
-    // Blocking variants — for callers that can't use a CoroutineScope
-    fun getBooleanBlocking(key: String, defaultValue: Boolean): Boolean =
-        runBlocking { getBoolean(key, defaultValue).first() }
-
-    fun getLongBlocking(key: String, defaultValue: Long): Long =
-        runBlocking { getLong(key, defaultValue).first() }
-
-    fun getFloatBlocking(key: String, defaultValue: Float): Float =
-        runBlocking { getFloat(key, defaultValue).first() }
-
-    fun getDoubleBlocking(key: String, defaultValue: Double): Double =
-        runBlocking { getDouble(key, defaultValue).first() }
-
-    fun getStringBlocking(key: String, defaultValue: String): String =
-        runBlocking { getString(key, defaultValue).first() }
-
-    fun getIntBlocking(key: String, defaultValue: Int): Int =
-        runBlocking { getInt(key, defaultValue).first() }
-
-    fun <T> getObjectBlocking(key: String, type: Type): T? =
-        runBlocking { getObject<T>(key, type).first() }
-
-    fun <T> getObjectBlocking(key: String, clzz: Class<T>): T? =
-        runBlocking { getObject(key, clzz).first() }
-
-    fun containsBlocking(key: String): Boolean =
-        runBlocking { contains(key).first() }
-
     suspend fun putBoolean(key: String, value: Boolean) {
         dataStore.edit { it[booleanPreferencesKey(key)] = value }
     }
@@ -135,6 +113,57 @@ class DataStoreHelper(context: Context, prefName: String) {
             putString(key, GsonManager.toJson(value))
         }
     }
+
+
+
+    // Blocking variants — for callers that can't use a CoroutineScope
+    fun getBooleanBlocking(key: String, defaultValue: Boolean): Boolean =
+        runBlocking { getBoolean(key, defaultValue).first() }
+
+    fun getLongBlocking(key: String, defaultValue: Long): Long =
+        runBlocking { getLong(key, defaultValue).first() }
+
+    fun getFloatBlocking(key: String, defaultValue: Float): Float =
+        runBlocking { getFloat(key, defaultValue).first() }
+
+    fun getDoubleBlocking(key: String, defaultValue: Double): Double =
+        runBlocking { getDouble(key, defaultValue).first() }
+
+    fun getStringBlocking(key: String, defaultValue: String): String =
+        runBlocking { getString(key, defaultValue).first() }
+
+    fun getIntBlocking(key: String, defaultValue: Int): Int =
+        runBlocking { getInt(key, defaultValue).first() }
+
+    fun <T> getObjectBlocking(key: String, type: Type): T? =
+        runBlocking { getObject<T>(key, type).first() }
+
+    fun <T> getObjectBlocking(key: String, clzz: Class<T>): T? =
+        runBlocking { getObject(key, clzz).first() }
+
+    fun containsBlocking(key: String): Boolean =
+        runBlocking { contains(key).first() }
+
+    fun putBooleanBlocking(key: String, value: Boolean) = runBlockingScope { putBoolean(key, value) }
+
+    fun putLongBlocking(key: String, value: Long) = runBlockingScope { putLong(key, value) }
+
+    fun putFloatBlocking(key: String, value: Float) = runBlockingScope { putFloat(key, value) }
+
+    fun putDoubleBlocking(key: String, value: Double) = runBlockingScope { putDouble(key, value) }
+
+    fun putStringBlocking(key: String, value: String) = runBlockingScope { putString(key, value) }
+
+    fun putIntBlocking(key: String, value: Int) = runBlockingScope { putInt(key, value) }
+
+    fun <T> putObjectBlocking(key: String, value: T?) = runBlockingScope { putObject(key, value) }
+
+    fun <T> putBlocking(key: String, value: T?) = runBlockingScope { put(key, value) }
+
+    fun removeBlocking(vararg keys: String) = runBlockingScope { remove(*keys) }
+
+    private inline fun <T> runBlockingScope(crossinline block: suspend () -> T): T =
+        runBlocking(coroutineScope.coroutineContext) { block() }
 
     // end region
 
