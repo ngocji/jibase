@@ -32,5 +32,7 @@ enum class Payload {
     /* when item are selected */
     SELECTED,
     /* when item are un selected */
-    UN_SELECTED
+    UN_SELECTED,
+    /** when action mode state updated  */
+    ACTION_MODE_STATE,
 }

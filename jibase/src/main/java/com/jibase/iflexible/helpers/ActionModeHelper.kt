@@ -6,17 +6,19 @@ import androidx.annotation.MenuRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.recyclerview.widget.RecyclerView.NO_POSITION
+import com.jibase.iflexible.adapter.FlexibleAdapter
 import com.jibase.iflexible.adapter.FlexibleAdapter.Companion.IDLE
 import com.jibase.iflexible.adapter.FlexibleAdapter.Companion.MULTI
 import com.jibase.iflexible.adapter.FlexibleAdapter.Companion.SINGLE
-import com.jibase.iflexible.adapter.FlexibleAdapter
+import com.jibase.iflexible.entities.Payload
 import com.jibase.utils.Log
 
 class ActionModeHelper(
-        val targetActivity: AppCompatActivity,
-        val adapter: FlexibleAdapter<*>,
-        @MenuRes val cabMenu: Int,
-        val callback: ActionModeListener? = null) : ActionMode.Callback {
+    val targetActivity: AppCompatActivity,
+    val adapter: FlexibleAdapter<*>,
+    @MenuRes val cabMenu: Int,
+    val callback: ActionModeListener? = null
+) : ActionMode.Callback {
 
     private val TAG = javaClass.simpleName
 
@@ -266,6 +268,9 @@ class ActionModeHelper(
 
     private fun updateActionModeState(enable: Boolean) {
         adapter.isActionModeStateEnable = enable
+        if (adapter.itemCount != 0) {
+            adapter.notifyItemRangeChanged(0, adapter.itemCount, Payload.ACTION_MODE_STATE)
+        }
     }
 
     interface ActionModeListener : ActionMode.Callback {
