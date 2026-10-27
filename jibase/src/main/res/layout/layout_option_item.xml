@@ -90,7 +90,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0.8"
-            tools:visibility="visible"
             android:textSize="12sp"
             android:visibility="gone"
             tools:text="SUb" />
